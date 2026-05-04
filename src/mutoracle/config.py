@@ -55,6 +55,15 @@ class RAGConfig(BaseModel):
     top_k: PositiveInt = 3
 
 
+class OracleConfig(BaseModel):
+    """Local oracle model settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    semantic_model: str = "sentence-transformers/all-mpnet-base-v2"
+    nli_model: str = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"
+
+
 class RuntimeConfig(BaseModel):
     """Filesystem and reproducibility settings."""
 
@@ -74,6 +83,7 @@ class MutOracleConfig(BaseModel):
     cost: CostConfig = Field(default_factory=CostConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
     rag: RAGConfig = Field(default_factory=RAGConfig)
+    oracles: OracleConfig = Field(default_factory=OracleConfig)
 
 
 def load_config(path: Path | None = None) -> MutOracleConfig:

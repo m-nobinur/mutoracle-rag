@@ -8,37 +8,30 @@ localization in RAG pipelines. The committed design lock is in
 
 ## Current Status
 
-Phase 1 bootstrap is in place:
+Phases 1 through 4 are in place:
 
-- package metadata in `pyproject.toml`
-- typed public contracts in `src/mutoracle/contracts.py`
-- validated configuration loading in `src/mutoracle/config.py`
-- a smoke CLI exposed as `mutoracle`
-- pytest, ruff, and mypy configuration
-
-Phase 2 is complete with a reproducible RAG system under test:
-
-- fixture corpus and deterministic lexical retriever
-- planned module layout under `pipeline/`, `providers/`, and `storage/`
-- FAISS-compatible embedding index adapter with lightweight fixture fallback
-- stable prompt builder
-- OpenRouter generator wrapper through the OpenAI SDK
-- SQLite response cache, cost ledger, token metadata, and latency metadata
+- repository bootstrap, typed contracts, config loading, CLI, and quality gates
+- reproducible fixture RAG system under test with OpenRouter generator support
+- seven canonical mutation operators: CI, CR, CS, QP, QN, FS, and FA
+- NLI, semantic-similarity, and LLM-as-judge oracle modules
+- shared SQLite response cache, oracle-score cache, cost ledger, and metadata
 - `mutoracle smoke --queries 10` for credential-free 10-query smoke runs
 
 ## Quickstart
 
 ```bash
-uv sync --all-extras --dev
+uv sync --dev
 uv run mutoracle --help
 uv run mutoracle config show
 uv run mutoracle smoke --queries 10
 uv run mutoracle rag smoke
+uv run mutoracle mutate --operator CI
 uv run pytest
 ```
 
-Model calls are not required for the bootstrap smoke path. Later phases will use
-OpenRouter through the OpenAI-compatible API.
+Model calls are not required for the default smoke path. The LLM judge uses
+OpenRouter through the OpenAI-compatible API when configured with
+`OPENROUTER_API_KEY`.
 
 ## Configuration
 
@@ -53,8 +46,15 @@ uv run mutoracle config validate
 ```
 
 The current development config uses `openai/gpt-5-nano` as the Phase 2 generator
-and `minimax/minimax-m2.5` as the later judge model. Change model IDs in
-`experiments/configs/dev.yaml`.
+and `minimax/minimax-m2.5` as the judge model. Local oracle model names are also
+configured in `experiments/configs/dev.yaml`.
+
+Install local model dependencies only when running real NLI or semantic oracle
+inference:
+
+```bash
+uv sync --extra oracles --dev
+```
 
 ## Development Gate
 

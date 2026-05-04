@@ -27,21 +27,33 @@ class OpenRouterProvider:
         self._config = config
         self._ledger = ledger
 
-    def complete(self, prompt: str) -> ProviderCompletion:
+    def complete(
+        self,
+        prompt: str,
+        *,
+        model: str | None = None,
+        temperature: float | None = None,
+        request_kind: str = "generation",
+    ) -> ProviderCompletion:
         """Return a cached or live completion for a prompt."""
 
-        model = self._config.models.generator
+        resolved_model = model or self._config.models.generator
+        resolved_temperature = (
+            float(temperature)
+            if temperature is not None
+            else float(self._config.models.temperature)
+        )
         cache_key = completion_cache_key(
-            model=model,
+            model=resolved_model,
             prompt=prompt,
-            temperature=float(self._config.models.temperature),
+            temperature=resolved_temperature,
             provider_route="openrouter",
             seed=self._config.runtime.seed,
         )
         cached = self._ledger.lookup_completion(cache_key)
         if cached is not None:
             self._ledger.record_usage(
-                model=model,
+                model=resolved_model,
                 prompt_tokens=0,
                 completion_tokens=0,
                 cost_usd=0.0,
@@ -50,6 +62,7 @@ class OpenRouterProvider:
             )
             metadata = dict(cached.metadata)
             metadata["cache_hit"] = True
+            metadata["request_kind"] = request_kind
             return ProviderCompletion(answer=cached.answer, metadata=metadata)
 
         api_key = self._config.openrouter.api_key
@@ -59,7 +72,12 @@ class OpenRouterProvider:
 
         self._enforce_budget()
         started_at = perf_counter()
-        response = self._request_completion(prompt, api_key)
+        response = self._request_completion(
+            prompt,
+            api_key,
+            model=resolved_model,
+            temperature=resolved_temperature,
+        )
         latency_seconds = round(perf_counter() - started_at, 6)
         usage = _extract_usage(response)
         answer = _extract_answer(response)
@@ -72,12 +90,13 @@ class OpenRouterProvider:
             ),
         )
         metadata = {
-            "model": model,
+            "model": resolved_model,
             "cache_hit": False,
             "provider": "openrouter",
             "provider_route": "openrouter",
+            "request_kind": request_kind,
             "prompt_hash": prompt_hash(prompt),
-            "temperature": float(self._config.models.temperature),
+            "temperature": resolved_temperature,
             "seed": self._config.runtime.seed,
             "usage": usage,
             "estimated_cost_usd": cost_usd,
@@ -89,7 +108,7 @@ class OpenRouterProvider:
             metadata=metadata,
         )
         self._ledger.record_usage(
-            model=model,
+            model=resolved_model,
             prompt_tokens=usage["prompt_tokens"],
             completion_tokens=usage["completion_tokens"],
             cost_usd=cost_usd,
@@ -113,7 +132,14 @@ class OpenRouterProvider:
             )
             raise RuntimeError(msg)
 
-    def _request_completion(self, prompt: str, api_key: str) -> dict[str, Any]:
+    def _request_completion(
+        self,
+        prompt: str,
+        api_key: str,
+        *,
+        model: str,
+        temperature: float,
+    ) -> dict[str, Any]:
         client = OpenAI(
             api_key=api_key,
             base_url=self._config.openrouter.base_url,
@@ -125,9 +151,9 @@ class OpenRouterProvider:
 
         try:
             completion = client.chat.completions.create(
-                model=self._config.models.generator,
+                model=model,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=float(self._config.models.temperature),
+                temperature=temperature,
                 max_tokens=self._config.models.max_tokens,
                 extra_headers=extra_headers,
             )

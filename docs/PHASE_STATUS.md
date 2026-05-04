@@ -124,10 +124,50 @@ Exit plan:
 - Each canonical operator can run independently against fixture `RAGRun`
   objects and emit stable mutation metadata for downstream oracle scoring.
 
+## Phase 4: Oracle Layer
+
+Status: complete.
+
+Completed:
+
+- Added `src/mutoracle/oracles/` with base score helpers, detailed score
+  metadata, and cache-backed oracle behavior.
+- Implemented semantic similarity scoring with injectable or lazy-loaded
+  `sentence-transformers` embeddings.
+- Implemented NLI scoring with injectable or lazy-loaded Hugging Face
+  `transformers` entailment probabilities.
+- Implemented OpenRouter-backed LLM judge scoring with the configured judge
+  model, locked prompt hash, strict Pydantic JSON validation, one retry, and
+  structured invalid-response failure metadata.
+- Extended the shared SQLite ledger with an `oracle_scores` table while keeping
+  provider completions and usage/cost ledger behavior intact.
+- Added optional `oracles` dependencies and config fields for local oracle model
+  names.
+- Added default pytest marker filtering so live provider tests are skipped unless
+  explicitly selected.
+- Documented score meaning, cache semantics, schema, and limitations in
+  `docs/ORACLE_LAYER.md`.
+
+Validation:
+
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src/mutoracle`
+- `uv run pytest tests/unit/test_oracles.py tests/unit/test_cache.py tests/unit/test_provider.py tests/unit/test_phase_layout.py`
+- `uv run pytest`
+
+Exit plan:
+
+- NLI, semantic similarity, and LLM judge oracles can score fixture `RAGRun`
+  objects through normalized `[0, 1]` interfaces.
+- Cached reruns avoid repeated injected model/provider calls.
+- Invalid judge JSON retries once and then records a structured failure without
+  blocking downstream aggregation.
+
 ## Next Phase
 
-Phase 4 should implement the oracle layer:
+Phase 5 should implement aggregation and fault localization:
 
-- NLI, semantic-similarity, and LLM-as-judge oracle interfaces;
-- cache-backed scoring paths suitable for repeated mutation sweeps;
-- normalized score outputs for aggregation in Phase 5.
+- uniform, weighted, and confidence-gated score aggregation;
+- per-operator and per-stage score deltas;
+- calibrated `FaultReport` output with stage, confidence, deltas, and evidence.

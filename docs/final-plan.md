@@ -163,3 +163,23 @@ Phase 3 is complete as a deterministic mutation engine:
   command;
 - `docs/MUTATION_TAXONOMY.md` documents before/after examples for every
   operator.
+
+## Phase 4 Acceptance
+
+Phase 4 is complete as a cache-backed oracle layer:
+
+- `src/mutoracle/oracles/` exposes shared score helpers, semantic similarity,
+  NLI, and LLM judge implementations;
+- all oracle scores are normalized to `[0, 1]`, where higher means stronger
+  support from retrieved context;
+- semantic similarity maps context/answer cosine similarity into `[0, 1]`;
+- NLI returns entailment probability from an injectable or lazy-loaded
+  transformers backend;
+- the LLM judge uses the configured OpenRouter judge model, locked prompt hash,
+  strict Pydantic JSON validation, one retry, and structured failure metadata;
+- SQLite now stores oracle-score cache rows separately from completion cache
+  rows so repeated mutation sweeps avoid repeated model/provider calls;
+- local heavy oracle dependencies are optional and lazy-loaded, while tests use
+  tiny injected backends;
+- `docs/ORACLE_LAYER.md` documents score meaning, cache semantics, judge schema,
+  and limitations.
