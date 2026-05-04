@@ -4,10 +4,19 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveInt
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    NonNegativeFloat,
+    PositiveInt,
+    model_validator,
+)
+
+from mutoracle.aggregation.weighted import validate_weights
 
 DEFAULT_CONFIG_PATH = Path("experiments/configs/dev.yaml")
 PROJECT_ENV_PATH = Path(".env")
@@ -64,6 +73,32 @@ class OracleConfig(BaseModel):
     nli_model: str = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"
 
 
+class AggregationConfig(BaseModel):
+    """Aggregation and fault-localization settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    strategy: Literal["uniform", "weighted", "confidence_gated"] = "weighted"
+    weights: dict[str, float] = Field(
+        default_factory=lambda: {
+            "nli": 0.4,
+            "semantic_similarity": 0.3,
+            "llm_judge": 0.3,
+        }
+    )
+    delta_threshold: NonNegativeFloat = 0.05
+    confidence_gate_min_score: NonNegativeFloat = 0.5
+    confidence_gate_min_oracles: PositiveInt = 2
+
+    @model_validator(mode="after")
+    def _validate_weights(self) -> AggregationConfig:
+        validate_weights(self.weights)
+        if self.confidence_gate_min_score > 1.0:
+            msg = "confidence_gate_min_score must be in [0, 1]."
+            raise ValueError(msg)
+        return self
+
+
 class RuntimeConfig(BaseModel):
     """Filesystem and reproducibility settings."""
 
@@ -84,6 +119,8 @@ class MutOracleConfig(BaseModel):
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
     rag: RAGConfig = Field(default_factory=RAGConfig)
     oracles: OracleConfig = Field(default_factory=OracleConfig)
+    aggregation: AggregationConfig = Field(default_factory=AggregationConfig)
+    calibration: dict[str, Any] = Field(default_factory=dict)
 
 
 def load_config(path: Path | None = None) -> MutOracleConfig:
