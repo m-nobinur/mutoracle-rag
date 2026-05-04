@@ -87,9 +87,47 @@ Exit plan:
 
 ## Next Phase
 
-Phase 3 should implement the mutation engine:
+## Phase 3: Mutation Engine
 
-- seven operators: CI, CR, CS, QP, QN, FS, FA;
-- registry by operator ID and stage;
-- deterministic before/after examples for fixture `RAGRun` objects;
-- unit tests proving each operator preserves the public schema.
+Status: complete.
+
+Completed:
+
+- Added `src/mutoracle/mutations/` with base copy helpers, registry lookup, and
+  stage filtering.
+- Implemented all seven canonical operators: CI, CR, CS, QP, QN, FS, and FA.
+- Added deterministic rejection metadata for unsupported mutation cases.
+- Added `mutoracle mutate --operator CI` for fixture-run mutation smoke checks.
+- Added `make mutate` as the default mutation CLI wrapper.
+- Documented operator behavior and before/after examples in
+  `docs/MUTATION_TAXONOMY.md`.
+- Added unit tests for schema preservation, determinism, CR edge cases,
+  QP similarity rejection, QN grammar rejection, and FS/FA supported spans.
+
+Validation:
+
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src/mutoracle`
+- `uv run pytest`
+- `uv run mutoracle smoke --queries 10`
+- `uv run mutoracle mutate --operator CI`
+- `uv run mutoracle mutate --operator CR`
+- `uv run mutoracle mutate --operator CS`
+- `uv run mutoracle mutate --operator QP`
+- `uv run mutoracle mutate --operator QN`
+- `uv run mutoracle mutate --operator FS`
+- `uv run mutoracle mutate --operator FA`
+
+Exit plan:
+
+- Each canonical operator can run independently against fixture `RAGRun`
+  objects and emit stable mutation metadata for downstream oracle scoring.
+
+## Next Phase
+
+Phase 4 should implement the oracle layer:
+
+- NLI, semantic-similarity, and LLM-as-judge oracle interfaces;
+- cache-backed scoring paths suitable for repeated mutation sweeps;
+- normalized score outputs for aggregation in Phase 5.

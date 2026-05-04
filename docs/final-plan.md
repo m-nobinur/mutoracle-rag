@@ -144,3 +144,22 @@ Phase 2 is complete as a reproducible RAG system under test:
   command for clean-clone validation.
 - `experiments/configs/dev.yaml` is discovered by default for development runs,
   while `.env` is reserved for local secrets such as `OPENROUTER_API_KEY`.
+
+## Phase 3 Acceptance
+
+Phase 3 is complete as a deterministic mutation engine:
+
+- `src/mutoracle/mutations/` exposes base copy helpers, a canonical registry,
+  and operator lookup by ID;
+- all seven canonical operators are implemented: CI, CR, CS, QP, QN, FS, FA;
+- retrieval mutations cover context injection, removal, and shuffle edge cases;
+- prompt mutations apply high-overlap paraphrase and grammatical negation rules,
+  rejecting unsupported outputs with metadata instead of exceptions;
+- generation mutations substitute only supported answer spans and reject
+  unsupported answers with metadata;
+- every mutation returns a schema-preserving `RAGRun` with `mutation` and
+  `mutations` metadata;
+- `uv run mutoracle mutate --operator CI` is the credential-free mutation smoke
+  command;
+- `docs/MUTATION_TAXONOMY.md` documents before/after examples for every
+  operator.
