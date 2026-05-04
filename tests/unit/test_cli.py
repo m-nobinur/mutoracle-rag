@@ -45,3 +45,12 @@ def test_cli_mutate_ci() -> None:
     assert "Context Injection" in result.output
     assert '"operator": "CI"' in result.output
     assert '"rejected": false' in result.output
+
+
+def test_cli_diagnose_uses_fixture_oracles() -> None:
+    result = CliRunner().invoke(app, ["diagnose"])
+
+    assert result.exit_code == 0
+    assert "Fault diagnosis" in result.output
+    assert '"stage":' in result.output
+    assert '"deltas":' in result.output

@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from mutoracle.aggregation import (
+    ConfidenceGatedAggregator,
+    UniformAggregator,
+    WeightedAggregator,
+)
+from mutoracle.localizer import FaultLocalizer
 from mutoracle.mutations import get_operator, mutation_registry
 from mutoracle.oracles import LLMJudgeOracle, NLIOracle, SemanticSimilarityOracle
 from mutoracle.pipeline.prompt import build_rag_prompt
@@ -26,3 +32,10 @@ def test_phase_four_module_layout_exports_expected_symbols() -> None:
     assert SemanticSimilarityOracle
     assert NLIOracle
     assert LLMJudgeOracle
+
+
+def test_phase_five_module_layout_exports_expected_symbols() -> None:
+    assert UniformAggregator
+    assert WeightedAggregator
+    assert ConfidenceGatedAggregator
+    assert FaultLocalizer
