@@ -1,0 +1,12 @@
+[
+  "What is MutOracle-RAG?",
+  "What does RAG mean?",
+  "Which stages can MutOracle-RAG localize?",
+  "What are the canonical mutation operators?",
+  "How does FITS evaluate localization?",
+  "Which provider does the project use for model calls?",
+  "What is context injection?",
+  "Why does the project use a cache ledger?",
+  "What is the prompt builder responsible for?",
+  "What metadata should RAG runs record?"
+]
