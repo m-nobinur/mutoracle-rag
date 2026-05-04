@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from importlib import resources
 from pathlib import Path
+from random import Random
 from typing import Annotated, Any
 
 import typer
@@ -14,6 +15,8 @@ from rich.panel import Panel
 
 from mutoracle import __version__
 from mutoracle.config import MutOracleConfig, load_config, resolve_config_path
+from mutoracle.contracts import RAGRun
+from mutoracle.mutations import get_operator, list_operator_ids
 from mutoracle.rag import FixtureRAGPipeline
 
 app = typer.Typer(
@@ -117,6 +120,67 @@ def smoke(
             queries=_default_smoke_queries(limit=queries),
             remote=False,
         )
+
+
+@app.command()
+def mutate(
+    operator: Annotated[
+        str,
+        typer.Option(
+            "--operator",
+            "-o",
+            help="Canonical mutation operator ID: CI, CR, CS, QP, QN, FS, or FA.",
+        ),
+    ],
+    query: Annotated[
+        str,
+        typer.Option("--query", "-q", help="Question to run before mutation."),
+    ] = "What is MutOracle-RAG?",
+    seed: Annotated[
+        int,
+        typer.Option("--seed", help="Deterministic mutation seed."),
+    ] = 2026,
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", exists=True, dir_okay=False),
+    ] = None,
+    corpus: Annotated[
+        Path | None,
+        typer.Option("--corpus", exists=True, dir_okay=False),
+    ] = None,
+) -> None:
+    """Run one canonical mutation against a fixture RAG run."""
+
+    try:
+        mutation_operator = get_operator(operator)
+    except ValueError as error:
+        console.print(f"[red]Mutation error:[/red] {error}")
+        raise typer.Exit(code=2) from error
+
+    resolved = _load_or_exit(config)
+    pipeline = FixtureRAGPipeline(config=resolved, corpus_path=corpus)
+    run = pipeline.run(query)
+    mutated = mutation_operator.apply(run, rng=Random(seed))
+    mutation = mutated.metadata["mutation"]
+    status = "rejected" if mutation["rejected"] else "applied"
+
+    console.print(
+        Panel.fit(
+            f"Operator: {operator.upper()} ({mutation_operator.name})\n"
+            f"Stage: {mutation_operator.stage}\n"
+            f"Status: {status}",
+            title="Mutation",
+        )
+    )
+    console.print_json(
+        data={
+            "operator": operator.upper(),
+            "valid_operators": list_operator_ids(),
+            "baseline": _run_summary(run),
+            "mutated": _run_summary(mutated),
+            "mutation": mutation,
+        }
+    )
 
 
 @rag_app.command("smoke")
@@ -233,6 +297,15 @@ def _default_smoke_queries(*, limit: int) -> list[str]:
     while len(selected) < limit:
         selected.extend(queries)
     return selected[:limit]
+
+
+def _run_summary(run: RAGRun) -> dict[str, Any]:
+    return {
+        "query": run.query,
+        "passage_count": len(run.passages),
+        "passages": run.passages,
+        "answer": run.answer,
+    }
 
 
 def _load_or_exit(path: Path | None) -> MutOracleConfig:

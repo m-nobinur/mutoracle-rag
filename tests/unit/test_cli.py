@@ -36,3 +36,12 @@ def test_cli_ten_query_smoke() -> None:
     assert result.exit_code == 0
     assert "RAG batch smoke passed" in result.output
     assert '"queries": 10' in result.output
+
+
+def test_cli_mutate_ci() -> None:
+    result = CliRunner().invoke(app, ["mutate", "--operator", "CI"])
+
+    assert result.exit_code == 0
+    assert "Context Injection" in result.output
+    assert '"operator": "CI"' in result.output
+    assert '"rejected": false' in result.output
