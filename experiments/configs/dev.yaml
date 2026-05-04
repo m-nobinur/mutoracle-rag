@@ -11,6 +11,10 @@ models:
 rag:
   top_k: 3
 
+oracles:
+  semantic_model: sentence-transformers/all-mpnet-base-v2
+  nli_model: MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli
+
 cost:
   max_cost_usd: 1.0
   max_queries: 5
