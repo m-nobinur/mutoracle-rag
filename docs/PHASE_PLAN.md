@@ -1,13 +1,10 @@
 # Phase-by-Phase Development Plan
 
-This committed phase index mirrors the local execution notes while keeping the
-large `sources/` planning folder out of Git history.
-
 | Phase | Name | Main output |
 | --- | --- | --- |
 | 0 | Design Lock | accepted scope and source decisions |
 | 1 | Repository Bootstrap | package skeleton, `uv`, CI, smoke CLI |
-| 2 | RAG System Under Test | reproducible RAG pipeline |
+| 2 | RAG System Under Test | reproducible RAG pipeline, provider, and cache |
 | 3 | Mutation Engine | seven operators and registry |
 | 4 | Oracle Layer | NLI, similarity, LLM judge, cache |
 | 5 | Aggregation and Localizer | calibrated fault reports |

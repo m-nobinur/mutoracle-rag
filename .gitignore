@@ -5,9 +5,11 @@
 .pytest_cache/
 .ruff_cache/
 .coverage
+.vscode/
 __pycache__/
 *.py[cod]
 htmlcov/
+dev-plan-source/
 dist/
 build/
 *.egg-info/

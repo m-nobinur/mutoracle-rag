@@ -9,6 +9,9 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveInt
 
+DEFAULT_CONFIG_PATH = Path("experiments/configs/dev.yaml")
+PROJECT_ENV_PATH = Path(".env")
+
 
 class OpenRouterConfig(BaseModel):
     """OpenRouter connection settings."""
@@ -16,8 +19,10 @@ class OpenRouterConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     api_key: str | None = None
+    base_url: str = "https://openrouter.ai/api/v1"
     app_title: str = "MutOracle-RAG"
     app_url: str | None = None
+    timeout_seconds: PositiveInt = 60
 
 
 class ModelConfig(BaseModel):
@@ -38,6 +43,16 @@ class CostConfig(BaseModel):
 
     max_cost_usd: NonNegativeFloat = 5.0
     max_queries: PositiveInt = 20
+    prompt_cost_per_1m_tokens: NonNegativeFloat = 0.0
+    completion_cost_per_1m_tokens: NonNegativeFloat = 0.0
+
+
+class RAGConfig(BaseModel):
+    """RAG system-under-test settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    top_k: PositiveInt = 3
 
 
 class RuntimeConfig(BaseModel):
@@ -58,14 +73,27 @@ class MutOracleConfig(BaseModel):
     models: ModelConfig = Field(default_factory=ModelConfig)
     cost: CostConfig = Field(default_factory=CostConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    rag: RAGConfig = Field(default_factory=RAGConfig)
 
 
 def load_config(path: Path | None = None) -> MutOracleConfig:
-    """Load config from optional YAML plus environment overrides."""
+    """Load config from YAML plus secret/environment overrides."""
 
-    raw = _read_yaml(path) if path else {}
+    _load_project_env()
+    resolved_path = resolve_config_path(path)
+    raw = _read_yaml(resolved_path) if resolved_path else {}
     config = MutOracleConfig.model_validate(raw)
-    return _apply_environment(config)
+    return _apply_environment(config, allow_runtime_overrides=resolved_path is None)
+
+
+def resolve_config_path(path: Path | None = None) -> Path | None:
+    """Return the explicit or conventional project config path, if available."""
+
+    if path is not None:
+        return path
+    if DEFAULT_CONFIG_PATH.exists():
+        return DEFAULT_CONFIG_PATH
+    return None
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
@@ -83,11 +111,31 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     return raw
 
 
-def _apply_environment(config: MutOracleConfig) -> MutOracleConfig:
+def _load_project_env(path: Path = PROJECT_ENV_PATH) -> None:
+    if not path.exists():
+        return
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+def _apply_environment(
+    config: MutOracleConfig,
+    *,
+    allow_runtime_overrides: bool,
+) -> MutOracleConfig:
     update: dict[str, Any] = {}
 
     openrouter_update = {
         "api_key": os.getenv("OPENROUTER_API_KEY"),
+        "base_url": os.getenv("OPENROUTER_BASE_URL"),
         "app_title": os.getenv("OPENROUTER_APP_TITLE"),
         "app_url": os.getenv("OPENROUTER_APP_URL"),
     }
@@ -97,18 +145,23 @@ def _apply_environment(config: MutOracleConfig) -> MutOracleConfig:
     if openrouter_update:
         update["openrouter"] = config.openrouter.model_copy(update=openrouter_update)
 
-    cost_update: dict[str, Any] = {}
-    if max_cost := os.getenv("MUTORACLE_MAX_COST_USD"):
-        cost_update["max_cost_usd"] = float(max_cost)
-    if max_queries := os.getenv("MUTORACLE_MAX_QUERIES"):
-        cost_update["max_queries"] = int(max_queries)
-    if cost_update:
-        update["cost"] = config.cost.model_copy(update=cost_update)
+    if allow_runtime_overrides:
+        cost_update: dict[str, Any] = {}
+        if max_cost := os.getenv("MUTORACLE_MAX_COST_USD"):
+            cost_update["max_cost_usd"] = float(max_cost)
+        if max_queries := os.getenv("MUTORACLE_MAX_QUERIES"):
+            cost_update["max_queries"] = int(max_queries)
+        if prompt_cost := os.getenv("MUTORACLE_PROMPT_COST_PER_1M_TOKENS"):
+            cost_update["prompt_cost_per_1m_tokens"] = float(prompt_cost)
+        if completion_cost := os.getenv("MUTORACLE_COMPLETION_COST_PER_1M_TOKENS"):
+            cost_update["completion_cost_per_1m_tokens"] = float(completion_cost)
+        if cost_update:
+            update["cost"] = config.cost.model_copy(update=cost_update)
 
-    runtime_update: dict[str, Any] = {}
-    if cache_path := os.getenv("MUTORACLE_CACHE_PATH"):
-        runtime_update["cache_path"] = Path(cache_path)
-    if runtime_update:
-        update["runtime"] = config.runtime.model_copy(update=runtime_update)
+        runtime_update: dict[str, Any] = {}
+        if cache_path := os.getenv("MUTORACLE_CACHE_PATH"):
+            runtime_update["cache_path"] = Path(cache_path)
+        if runtime_update:
+            update["runtime"] = config.runtime.model_copy(update=runtime_update)
 
     return config.model_copy(update=update)

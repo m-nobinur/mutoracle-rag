@@ -17,3 +17,22 @@ def test_cli_smoke() -> None:
 
     assert result.exit_code == 0
     assert "Bootstrap smoke passed" in result.output
+
+
+def test_cli_rag_smoke() -> None:
+    result = CliRunner().invoke(
+        app,
+        ["rag", "smoke", "--query", "What is MutOracle-RAG?"],
+    )
+
+    assert result.exit_code == 0
+    assert "RAG smoke passed" in result.output
+    assert "mutoracle-purpose" in result.output
+
+
+def test_cli_ten_query_smoke() -> None:
+    result = CliRunner().invoke(app, ["smoke", "--queries", "10"])
+
+    assert result.exit_code == 0
+    assert "RAG batch smoke passed" in result.output
+    assert '"queries": 10' in result.output

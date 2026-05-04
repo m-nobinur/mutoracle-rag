@@ -1,9 +1,5 @@
 # MutOracle-RAG Design Lock
 
-This document is the committed Phase 0 design lock for MutOracle-RAG. The larger
-local research notes under `sources/` are intentionally not part of the initial
-repository history.
-
 ## Project Identity
 
 Recommended title:
@@ -117,7 +113,7 @@ If the maximum stage delta is below the calibrated threshold, the result is
 - Environment and locking: `uv`.
 - CLI: Typer plus Rich.
 - Config: Pydantic plus YAML.
-- Provider: OpenRouter through the OpenAI-compatible API.
+- Provider: OpenRouter through the OpenAI SDK with OpenRouter `base_url`.
 - Retrieval: sentence-transformers embeddings plus FAISS.
 - Local storage: SQLite for model cache/cost ledger, DuckDB for result analysis.
 - Quality gate: ruff, mypy, pytest, pytest-cov, pre-commit, GitHub Actions.
@@ -132,3 +128,19 @@ cheap smoke values and can be overridden by YAML or environment.
 - OpenRouter-through-OpenAI-SDK provider decision is locked for v1.
 - `uv` and GitHub CLI workflow are accepted as the development path.
 - The paper claim is pipeline-stage fault localization.
+
+## Phase 2 Acceptance
+
+Phase 2 is complete as a reproducible RAG system under test:
+
+- planned module layout exists under `src/mutoracle/pipeline/`,
+  `src/mutoracle/providers/`, and `src/mutoracle/storage/`;
+- fixture corpus and smoke queries are packaged under `src/mutoracle/fixtures/`;
+- deterministic fixture RAG runs produce stable `RAGRun` objects;
+- prompt hash, token usage, provider route, seed, cost, and latency metadata are
+  recorded in run metadata;
+- OpenRouter generation uses the OpenAI SDK and local SQLite cache/cost ledger;
+- `uv run mutoracle smoke --queries 10` is the credential-free 10-query smoke
+  command for clean-clone validation.
+- `experiments/configs/dev.yaml` is discovered by default for development runs,
+  while `.env` is reserved for local secrets such as `OPENROUTER_API_KEY`.
