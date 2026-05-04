@@ -16,12 +16,24 @@ Phase 1 bootstrap is in place:
 - a smoke CLI exposed as `mutoracle`
 - pytest, ruff, and mypy configuration
 
+Phase 2 is complete with a reproducible RAG system under test:
+
+- fixture corpus and deterministic lexical retriever
+- planned module layout under `pipeline/`, `providers/`, and `storage/`
+- FAISS-compatible embedding index adapter with lightweight fixture fallback
+- stable prompt builder
+- OpenRouter generator wrapper through the OpenAI SDK
+- SQLite response cache, cost ledger, token metadata, and latency metadata
+- `mutoracle smoke --queries 10` for credential-free 10-query smoke runs
+
 ## Quickstart
 
 ```bash
 uv sync --all-extras --dev
 uv run mutoracle --help
 uv run mutoracle config show
+uv run mutoracle smoke --queries 10
+uv run mutoracle rag smoke
 uv run pytest
 ```
 
@@ -30,13 +42,19 @@ OpenRouter through the OpenAI-compatible API.
 
 ## Configuration
 
-Copy `.env.example` into your local shell or secret manager and set
-`OPENROUTER_API_KEY` before running any command that calls an external model.
-The bootstrap CLI can run without credentials.
+The project source of truth for development settings is
+`experiments/configs/dev.yaml` when that file exists. Use `.env` for secrets,
+especially `OPENROUTER_API_KEY`; the app loads `.env` automatically and masks the
+key in `config show`.
 
 ```bash
-uv run mutoracle config validate --config experiments/configs/dev.yaml
+uv run mutoracle config show
+uv run mutoracle config validate
 ```
+
+The current development config uses `openai/gpt-5-nano` as the Phase 2 generator
+and `minimax/minimax-m2.5` as the later judge model. Change model IDs in
+`experiments/configs/dev.yaml`.
 
 ## Development Gate
 
@@ -53,4 +71,5 @@ Equivalent Make targets are available:
 make install
 make lint
 make test
+make smoke
 ```
