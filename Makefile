@@ -1,4 +1,4 @@
-.PHONY: install format lint type test check cli
+.PHONY: install format lint type test check cli smoke
 
 install:
 	uv sync --all-extras --dev
@@ -19,3 +19,6 @@ check: lint type test
 
 cli:
 	uv run mutoracle --help
+
+smoke:
+	uv run mutoracle smoke --queries 10
