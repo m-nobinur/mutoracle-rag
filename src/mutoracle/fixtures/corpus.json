@@ -1,0 +1,27 @@
+[
+  {
+    "id": "rag-definition",
+    "title": "Retrieval-Augmented Generation",
+    "text": "Retrieval-augmented generation, or RAG, answers a user question by retrieving external passages and grounding the generated response in that context."
+  },
+  {
+    "id": "mutoracle-purpose",
+    "title": "MutOracle-RAG Goal",
+    "text": "MutOracle-RAG localizes hallucination faults by applying controlled mutations to retrieval, prompt construction, and generation stages, then comparing oracle score deltas."
+  },
+  {
+    "id": "fits-split",
+    "title": "FITS Dataset",
+    "text": "FITS is planned as a frozen single-stage fault-injection split used to evaluate whether a method can identify the pipeline stage that caused a RAG failure."
+  },
+  {
+    "id": "openrouter-provider",
+    "title": "OpenRouter Provider",
+    "text": "The project uses OpenRouter through an OpenAI-compatible chat completions API, with model identifiers stored in configuration and run metadata."
+  },
+  {
+    "id": "mutation-taxonomy",
+    "title": "Mutation Operators",
+    "text": "The canonical mutation operators are CI, CR, CS, QP, QN, FS, and FA, grouped across retrieval, prompt, and generation stages."
+  }
+]
