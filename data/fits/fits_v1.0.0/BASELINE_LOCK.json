@@ -1,0 +1,26 @@
+{
+  "artifact": "fits_v1.0.0",
+  "bundle": "phase6-baseline",
+  "locked_at_utc": "2026-05-05T10:48:18Z",
+  "tag": "fits-v1.0.0-baseline",
+  "build": {
+    "seed": 2026,
+    "code_commit": "58a030b85c91d81a3eab22ea9a3338b215744249"
+  },
+  "checksums": {
+    "manifest_json": "sha256:6741ec2fb33d11966e2c25751170fa504e5d11fe6103fb4394518dcf0dbefeef",
+    "fits_jsonl": "sha256:0622b4cd2c57cc64887b71f2fedb141b36a0da5942a619b13c5ac39158f119e0",
+    "validation_jsonl": "sha256:21a9ee5270c62dea6ac23105774b30813491c39bc97dd829cda51f415367d72d",
+    "test_jsonl": "sha256:78e34bc5ff6d04fadc4d1f29fb50619dd063ce4f41f0dd60e416343fde4dba22",
+    "audit_sample_jsonl": "sha256:dfe7350fc0c62b85e166cddfceb1a4e7825bfb6b625b33254c0f61982b9378b6",
+    "quality_gate_report_json": "sha256:cca1375f6f685f245169a9fde9478b941614f624c46f7e3db291e4f507866b0b",
+    "dataset_card_md": "sha256:ad8aecb2235a1617378e1159760bda360b97435b3acccb86512805573dde2681"
+  },
+  "quality_gate": {
+    "passed": true,
+    "deterministic_checksum": "sha256:0622b4cd2c57cc64887b71f2fedb141b36a0da5942a619b13c5ac39158f119e0"
+  },
+  "verification": {
+    "command": "shasum -a 256 data/fits/manifest.json data/fits/fits_v1.0.0/fits.jsonl data/fits/fits_v1.0.0/validation.jsonl data/fits/fits_v1.0.0/test.jsonl data/fits/fits_v1.0.0/audit_sample.jsonl data/fits/fits_v1.0.0/quality_gate_report.json data/FITS_DATASET.md"
+  }
+}

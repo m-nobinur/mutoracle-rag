@@ -1,7 +1,7 @@
 {
   "artifact": "fits_v1.0.0",
   "build_seed": 2026,
-  "code_commit": "77bad2cebc74fa912ecaf18d0053f4e780fccfb3",
+  "code_commit": "58a030b85c91d81a3eab22ea9a3338b215744249",
   "created_at": "2026-05-05T00:00:00+00:00",
   "files": {
     "audit_sample_jsonl": {

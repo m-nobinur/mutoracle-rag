@@ -24,6 +24,8 @@ The build writes:
   checksums, and quality-gate summary
 - `data/fits/fits_v1.0.0/*.jsonl`: generated validation/test/all/audit JSONL
   files
+- `data/fits/fits_v1.0.0/BASELINE_LOCK.json`: immutable checksum lock for the
+  baseline artifact bundle and tag pointer
 - `data/FITS_DATASET.md`: generated dataset card for the exact local artifact
 
 ## JSONL Schema
