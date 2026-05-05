@@ -1,13 +1,13 @@
 {
   "datasets": [
     {
-      "checksum": "sha256:1ddc48de22247a7396a9b3e6e293b22643afbca81978a6711183d212750089c5",
+      "checksum": "sha256:60d6126e6a4dedcebea4e2da00568502e9d542c1cb38e283c87bc1507c5f6c4a",
       "dataset_id": "rgb",
       "date": "2026-05-05",
       "license": "source license; verify upstream before redistribution",
       "name": "RGB Benchmark",
-      "notes": "Primary RAG evaluation source. The offline build uses a schema-compatible fixture preview until raw downloads are staged.",
-      "revision": "phase6-fixture-preview",
+      "notes": "Primary RAG evaluation source staged from the RGB benchmark repository with local source and Phase 8 split artifacts.",
+      "revision": "65ec39e40e7dc9abb50e9bf1b4f32be3f6f16615",
       "url": "https://github.com/chen700564/RGB"
     },
     {
