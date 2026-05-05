@@ -1,0 +1,31 @@
+experiment:
+  id: e2_localization
+  title: "E2 FITS fault-attribution accuracy"
+  output_dir: experiments/results/e2_localization
+
+dataset:
+  path: data/fits/fits_v1.0.0/fits.jsonl
+  split: test
+
+smoke:
+  query_limit: 5
+  seeds: [13, 42, 91]
+
+full:
+  query_limit: 240
+  seeds: [13, 42, 91]
+
+cost_gate:
+  estimated_cost_per_example_usd: 0.0
+  max_estimated_cost_usd: 0.5
+  require_smoke_before_full: true
+
+localizer:
+  aggregation: weighted
+  weights:
+    nli: 0.4
+    semantic_similarity: 0.3
+    llm_judge: 0.3
+  delta_threshold: 0.05
+  oracles: [nli, semantic_similarity, llm_judge]
+  work_units_per_record: 8

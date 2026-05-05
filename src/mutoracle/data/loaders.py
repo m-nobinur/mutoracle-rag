@@ -12,8 +12,12 @@ import json
 from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from mutoracle.data.manifest import DatasetManifest, sha256_text
+
+DEFAULT_RGB_SOURCE_PATH = Path("data/rgb/rgb_v1.0.0/source_en.jsonl")
+DEFAULT_RGB_MANIFEST_PATH = Path("data/rgb/manifest.json")
 
 
 @dataclass(frozen=True)
@@ -111,8 +115,11 @@ def load_rgb_subset(
 ) -> list[SourceExample]:
     """Load a local RGB subset or return deterministic fixture examples."""
 
-    if path is not None and path.exists():
-        return _read_source_examples(path, source="rgb", limit=limit)
+    resolved_path = path
+    if resolved_path is None and DEFAULT_RGB_SOURCE_PATH.exists():
+        resolved_path = DEFAULT_RGB_SOURCE_PATH
+    if resolved_path is not None and resolved_path.exists():
+        return _read_source_examples(resolved_path, source="rgb", limit=limit)
     return _fixture_examples(source="rgb", limit=limit)
 
 
@@ -164,6 +171,7 @@ def dataset_manifests(*, build_date: str | None = None) -> list[DatasetManifest]
     """Return Phase 6 source manifests with required provenance fields."""
 
     manifest_date = build_date or date.today().isoformat()
+    rgb_staging = _read_staged_rgb_manifest()
     rgb_preview = "\n".join(
         json.dumps(asdict(example), sort_keys=True)
         for example in load_rgb_subset(limit=10)
@@ -175,19 +183,39 @@ def dataset_manifests(*, build_date: str | None = None) -> list[DatasetManifest]
     noise_preview = "\n".join(
         json.dumps(item, sort_keys=True) for item in build_noise_pool(limit=10)
     )
+    rgb_checksum = sha256_text(rgb_preview)
+    rgb_revision = "phase6-fixture-preview"
+    rgb_notes = (
+        "Primary RAG evaluation source. The offline build uses a "
+        "schema-compatible fixture preview until raw downloads are staged."
+    )
+    if rgb_staging is not None:
+        checksum = rgb_staging.get("checksum")
+        if isinstance(checksum, str) and checksum.strip():
+            checksum_value = checksum.strip()
+            rgb_checksum = (
+                checksum_value
+                if checksum_value.startswith("sha256:")
+                else f"sha256:{checksum_value}"
+            )
+        revision = rgb_staging.get("source_revision")
+        if isinstance(revision, str) and revision.strip():
+            rgb_revision = revision.strip()
+        rgb_notes = (
+            "Primary RAG evaluation source staged from the RGB benchmark "
+            "repository with local source and Phase 8 split artifacts."
+        )
+
     return [
         DatasetManifest(
             dataset_id="rgb",
             name="RGB Benchmark",
             url="https://github.com/chen700564/RGB",
             license="source license; verify upstream before redistribution",
-            revision="phase6-fixture-preview",
-            checksum=sha256_text(rgb_preview),
+            revision=rgb_revision,
+            checksum=rgb_checksum,
             date=manifest_date,
-            notes=(
-                "Primary RAG evaluation source. The offline build uses a "
-                "schema-compatible fixture preview until raw downloads are staged."
-            ),
+            notes=rgb_notes,
         ),
         DatasetManifest(
             dataset_id="triviaqa",
@@ -278,3 +306,25 @@ def _read_source_examples(
         if len(examples) >= limit:
             break
     return examples
+
+
+def _read_staged_rgb_manifest() -> dict[str, Any] | None:
+    if not DEFAULT_RGB_MANIFEST_PATH.exists():
+        return None
+    try:
+        raw = json.loads(DEFAULT_RGB_MANIFEST_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(raw, dict):
+        return None
+
+    records = raw.get("records")
+    if not isinstance(records, dict):
+        return None
+    source_info = records.get("source_en_jsonl")
+    if not isinstance(source_info, dict):
+        return None
+    return {
+        "source_revision": raw.get("source_revision"),
+        "checksum": source_info.get("checksum"),
+    }

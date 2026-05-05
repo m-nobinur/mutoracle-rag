@@ -1,0 +1,36 @@
+openrouter:
+  base_url: https://openrouter.ai/api/v1
+  app_title: MutOracle-RAG
+
+models:
+  generator: morph/morph-v3-fast
+  judge: google/gemini-2.5-flash-lite
+  temperature: 0.0
+  max_tokens: 512
+
+rag:
+  top_k: 3
+
+oracles:
+  semantic_model: sentence-transformers/all-mpnet-base-v2
+  nli_model: MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli
+
+aggregation:
+  strategy: weighted
+  weights:
+    nli: 0.4
+    semantic_similarity: 0.3
+    llm_judge: 0.3
+  delta_threshold: 0.05
+  confidence_gate_min_score: 0.5
+  confidence_gate_min_oracles: 2
+
+cost:
+  max_cost_usd: 25.0
+  max_queries: 200000
+  prompt_cost_per_1m_tokens: 0.05
+  completion_cost_per_1m_tokens: 0.2
+
+runtime:
+  seed: 2026
+  cache_path: .mutoracle/phase8-real-cache.sqlite3
