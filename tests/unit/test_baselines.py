@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -16,6 +18,16 @@ from mutoracle.baselines import (
     run_baselines,
     tune_threshold_validation_only,
     write_baseline_outputs,
+)
+from mutoracle.baselines.metarag_baseline import (
+    LexicalNLIBackend,
+    NLIClaimVerifier,
+    SpacyClaimExtractor,
+    _entailment_probability,
+    _is_variant_violation,
+    _wordnet_replacement,
+    _wordnet_variants,
+    score_claims,
 )
 from mutoracle.contracts import RAGRun
 
@@ -217,6 +229,103 @@ def test_metarag_records_generation_metadata_for_comparability() -> None:
     assert result.model_ids == ["fixture-generation-model", "stub-nli"]
     assert result.metadata["latency_breakdown_seconds"]["generation"] == 0.2
     assert result.metadata["cost_breakdown_usd"]["generation"] == 0.07
+
+
+def test_metarag_validation_and_helper_branches() -> None:
+    with pytest.raises(ValueError, match="entailment_threshold"):
+        MetaRAGBaseline(entailment_threshold=1.2)
+
+    assert SentenceClaimExtractor(min_words=3).extract("No. Ada wrote notes.") == [
+        "Ada wrote notes"
+    ]
+    assert LexicalNLIBackend().probabilities(premise="anything", hypothesis="") == {
+        "entailment": 1.0,
+        "neutral": 0.0,
+    }
+    assert _entailment_probability({"neutral": 1.0}) == 0.0
+    assert _is_variant_violation(
+        SimpleNamespace(expected_supported=True),
+        score=0.1,
+        threshold=0.5,
+    )
+    assert _is_variant_violation(
+        SimpleNamespace(expected_supported=False),
+        score=0.9,
+        threshold=0.5,
+    )
+
+    class ProbBackend:
+        def probabilities(self, *, premise: str, hypothesis: str) -> dict[str, float]:
+            assert (premise, hypothesis) == ("context", "claim")
+            return {"entailment": 0.4}
+
+    verifier = NLIClaimVerifier(backend=ProbBackend(), model_id="stub")
+    assert score_claims(claims=["claim"], context="context", verifier=verifier) == [0.4]
+
+
+def test_spacy_claim_extractor_falls_back_and_uses_sentence_objects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    missing_spacy = ModuleType("spacy")
+
+    def raise_os_error(model_name: str):
+        del model_name
+        raise OSError("missing model")
+
+    missing_spacy.load = raise_os_error
+    monkeypatch.setitem(sys.modules, "spacy", missing_spacy)
+    assert SpacyClaimExtractor().extract("Ada wrote notes.") == ["Ada wrote notes"]
+
+    class Sentence:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    class NLP:
+        def __call__(self, answer: str):
+            del answer
+            return SimpleNamespace(
+                sents=[Sentence("Ada wrote notes."), Sentence("No.")]
+            )
+
+    good_spacy = ModuleType("spacy")
+    good_spacy.load = lambda model_name: NLP()
+    monkeypatch.setitem(sys.modules, "spacy", good_spacy)
+    assert SpacyClaimExtractor().extract("ignored") == ["Ada wrote notes"]
+
+
+def test_wordnet_variant_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Lemma:
+        def __init__(self, name: str, antonyms: list[object] | None = None) -> None:
+            self._name = name
+            self._antonyms = antonyms or []
+
+        def name(self) -> str:
+            return self._name
+
+        def antonyms(self) -> list[object]:
+            return self._antonyms
+
+    class Synset:
+        def lemmas(self) -> list[object]:
+            return [Lemma("authored", [Lemma("unwrote")])]
+
+    class WordNet:
+        def synsets(self, word: str) -> list[object]:
+            if word == "lookup":
+                raise LookupError("missing")
+            return [Synset()]
+
+    corpus = ModuleType("nltk.corpus")
+    corpus.wordnet = WordNet()
+    nltk = ModuleType("nltk")
+    nltk.corpus = corpus
+    monkeypatch.setitem(sys.modules, "nltk", nltk)
+    monkeypatch.setitem(sys.modules, "nltk.corpus", corpus)
+
+    variants = _wordnet_variants("Ada wrote")
+    assert {variant.kind for variant in variants} == {"synonym", "antonym"}
+    assert _wordnet_replacement("lookup", wn=WordNet(), antonym=False) is None
+    assert _wordnet_replacement("authored", wn=WordNet(), antonym=False) is None
 
 
 def _run(

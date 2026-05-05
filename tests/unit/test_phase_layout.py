@@ -22,6 +22,19 @@ from mutoracle.storage.sqlite_cache import SQLiteCacheLedger
 def test_planned_experiment_entry_points_exist() -> None:
     assert Path("experiments/run_baselines.py").exists()
     assert Path("experiments/run_weight_search.py").exists()
+    assert Path("experiments/run_mutoracle.py").exists()
+    assert Path("experiments/run_ablation.py").exists()
+    assert Path("experiments/run_latency.py").exists()
+    for name in (
+        "e1_detection.yaml",
+        "e2_localization.yaml",
+        "e3_ablation.yaml",
+        "e4_separability.yaml",
+        "e5_latency.yaml",
+        "e6_weighted.yaml",
+    ):
+        assert Path("experiments/configs", name).exists()
+    assert Path("docs/EXPERIMENT_PROTOCOL.md").exists()
 
 
 def test_phase_two_module_layout_exports_expected_symbols() -> None:
