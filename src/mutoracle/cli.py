@@ -15,6 +15,16 @@ from rich.panel import Panel
 
 from mutoracle import __version__
 from mutoracle.aggregation import build_aggregator
+from mutoracle.baselines import (
+    BaselineExample,
+    LexicalNLIBackend,
+    MetaRAGBaseline,
+    NLIClaimVerifier,
+    OfficialRagasFaithfulnessScorer,
+    RagasBaseline,
+    run_baselines,
+    write_baseline_outputs,
+)
 from mutoracle.cache import SQLiteCacheLedger
 from mutoracle.config import MutOracleConfig, load_config, resolve_config_path
 from mutoracle.contracts import RAGRun
@@ -34,10 +44,12 @@ config_app = typer.Typer(help="Inspect and validate MutOracle-RAG configuration.
 rag_app = typer.Typer(help="Run the reproducible Phase 2 RAG system under test.")
 data_app = typer.Typer(help="Build Phase 6 data manifests and FITS artifacts.")
 fits_app = typer.Typer(help="Build and validate the FITS fault-injection split.")
+baseline_app = typer.Typer(help="Run Phase 7 response-level baselines.")
 app.add_typer(config_app, name="config")
 app.add_typer(rag_app, name="rag")
 app.add_typer(data_app, name="data")
 app.add_typer(fits_app, name="fits")
+app.add_typer(baseline_app, name="baseline")
 
 console = Console()
 
@@ -308,6 +320,96 @@ def fits_build(
         version=version,
         force_rebuild=force,
     )
+
+
+@baseline_app.command("smoke")
+def baseline_smoke(
+    baseline: Annotated[
+        str,
+        typer.Option(
+            "--baseline",
+            help="Baseline to run: metarag, ragas, or all.",
+        ),
+    ] = "metarag",
+    queries: Annotated[
+        int,
+        typer.Option("--queries", min=1, help="Number of fixture queries to score."),
+    ] = 2,
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="JSONL output path for baseline results."),
+    ] = Path("experiments/results/baselines_smoke.jsonl"),
+    threshold: Annotated[
+        float,
+        typer.Option("--threshold", min=0.0, max=1.0, help="Faithfulness threshold."),
+    ] = 0.5,
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", exists=True, dir_okay=False),
+    ] = None,
+    corpus: Annotated[
+        Path | None,
+        typer.Option("--corpus", exists=True, dir_okay=False),
+    ] = None,
+) -> None:
+    """Run a tiny shared-output baseline comparison smoke."""
+
+    resolved = _load_or_exit(config)
+    selected = baseline.lower()
+    if selected not in {"metarag", "ragas", "all"}:
+        console.print("[red]Baseline error:[/red] choose metarag, ragas, or all")
+        raise typer.Exit(code=2)
+
+    pipeline = FixtureRAGPipeline(config=resolved, corpus_path=corpus)
+    examples = [
+        BaselineExample(run=pipeline.run(query))
+        for query in _default_smoke_queries(limit=queries)
+    ]
+    baselines: list[Any] = []
+    if selected in {"metarag", "all"}:
+        baselines.append(
+            MetaRAGBaseline(
+                verifier=NLIClaimVerifier(
+                    backend=LexicalNLIBackend(),
+                    model_id="fixture-lexical-nli",
+                )
+            )
+        )
+    if selected in {"ragas", "all"}:
+        try:
+            baselines.append(
+                RagasBaseline(
+                    scorer=OfficialRagasFaithfulnessScorer(config=resolved),
+                )
+            )
+        except RuntimeError as error:
+            console.print(f"[red]RAGAS error:[/red] {error}")
+            raise typer.Exit(code=2) from error
+
+    thresholds = {item.name: threshold for item in baselines}
+    results = run_baselines(
+        examples=examples,
+        baselines=baselines,
+        thresholds=thresholds,
+    )
+    manifest = write_baseline_outputs(
+        results=results,
+        output_path=output,
+        thresholds=thresholds,
+        metadata={
+            "command": "mutoracle baseline smoke",
+            "queries": queries,
+        },
+    )
+    console.print(
+        Panel.fit(
+            f"Baseline smoke passed\nRuns: {manifest.run_count}\n"
+            f"Baselines: {', '.join(manifest.baseline_names)}\n"
+            f"Output: {output}",
+            title="Phase 7 baselines",
+        )
+    )
+    console.print_json(data=manifest.model_dump(mode="json"))
 
 
 @rag_app.command("smoke")
