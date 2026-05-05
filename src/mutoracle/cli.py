@@ -18,6 +18,7 @@ from mutoracle.aggregation import build_aggregator
 from mutoracle.cache import SQLiteCacheLedger
 from mutoracle.config import MutOracleConfig, load_config, resolve_config_path
 from mutoracle.contracts import RAGRun
+from mutoracle.data import build_fits_dataset
 from mutoracle.localizer import FaultLocalizer, fault_report_to_dict
 from mutoracle.mutations import get_operator, list_operator_ids
 from mutoracle.mutations.base import content_similarity
@@ -31,8 +32,12 @@ app = typer.Typer(
 )
 config_app = typer.Typer(help="Inspect and validate MutOracle-RAG configuration.")
 rag_app = typer.Typer(help="Run the reproducible Phase 2 RAG system under test.")
+data_app = typer.Typer(help="Build Phase 6 data manifests and FITS artifacts.")
+fits_app = typer.Typer(help="Build and validate the FITS fault-injection split.")
 app.add_typer(config_app, name="config")
 app.add_typer(rag_app, name="rag")
+app.add_typer(data_app, name="data")
+app.add_typer(fits_app, name="fits")
 
 console = Console()
 
@@ -241,6 +246,70 @@ def diagnose(
     console.print_json(data=fault_report_to_dict(report))
 
 
+@data_app.command("build")
+def data_build(
+    output_root: Annotated[
+        Path,
+        typer.Option("--output-root", help="Directory for data manifests/artifacts."),
+    ] = Path("data"),
+    seed: Annotated[
+        int,
+        typer.Option("--seed", help="Deterministic FITS build seed."),
+    ] = 2026,
+    version: Annotated[
+        str,
+        typer.Option("--version", help="FITS artifact version directory."),
+    ] = "fits_v1.0.0",
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="Rebuild an existing FITS artifact directory.",
+        ),
+    ] = False,
+) -> None:
+    """Build Phase 6 manifests plus FITS validation/test JSONL files."""
+
+    _print_data_build(
+        output_root=output_root,
+        seed=seed,
+        version=version,
+        force_rebuild=force,
+    )
+
+
+@fits_app.command("build")
+def fits_build(
+    output_root: Annotated[
+        Path,
+        typer.Option("--output-root", help="Directory for data manifests/artifacts."),
+    ] = Path("data"),
+    seed: Annotated[
+        int,
+        typer.Option("--seed", help="Deterministic FITS build seed."),
+    ] = 2026,
+    version: Annotated[
+        str,
+        typer.Option("--version", help="FITS artifact version directory."),
+    ] = "fits_v1.0.0",
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="Rebuild an existing FITS artifact directory.",
+        ),
+    ] = False,
+) -> None:
+    """Build and validate FITS v1.0.0."""
+
+    _print_data_build(
+        output_root=output_root,
+        seed=seed,
+        version=version,
+        force_rebuild=force,
+    )
+
+
 @rag_app.command("smoke")
 def rag_smoke(
     query: Annotated[
@@ -337,6 +406,28 @@ def _print_rag_batch_smoke(
             "usage": pipeline.usage_summary(),
         }
     )
+
+
+def _print_data_build(
+    *,
+    output_root: Path,
+    seed: int,
+    version: str,
+    force_rebuild: bool,
+) -> None:
+    paths = build_fits_dataset(
+        output_root=output_root,
+        seed=seed,
+        version=version,
+        force_rebuild=force_rebuild,
+    )
+    console.print(
+        Panel.fit(
+            f"FITS build passed\nSeed: {seed}\nManifest: {paths['manifest']}",
+            title="Phase 6 data",
+        )
+    )
+    console.print_json(data={name: str(path) for name, path in paths.items()})
 
 
 def _default_smoke_queries(*, limit: int) -> list[str]:
