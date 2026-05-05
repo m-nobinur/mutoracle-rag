@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from mutoracle.aggregation import (
     ConfidenceGatedAggregator,
     UniformAggregator,
     WeightedAggregator,
 )
+from mutoracle.baselines import MetaRAGBaseline, RagasBaseline, run_baselines
 from mutoracle.data import build_fits_dataset, validate_fits_records
 from mutoracle.localizer import FaultLocalizer
 from mutoracle.mutations import get_operator, mutation_registry
@@ -14,6 +17,11 @@ from mutoracle.pipeline.rag import FixtureRAGPipeline
 from mutoracle.pipeline.retriever import LexicalRetriever
 from mutoracle.providers.openrouter_provider import OpenRouterProvider
 from mutoracle.storage.sqlite_cache import SQLiteCacheLedger
+
+
+def test_planned_experiment_entry_points_exist() -> None:
+    assert Path("experiments/run_baselines.py").exists()
+    assert Path("experiments/run_weight_search.py").exists()
 
 
 def test_phase_two_module_layout_exports_expected_symbols() -> None:
@@ -45,3 +53,9 @@ def test_phase_five_module_layout_exports_expected_symbols() -> None:
 def test_phase_six_module_layout_exports_expected_symbols() -> None:
     assert build_fits_dataset
     assert validate_fits_records
+
+
+def test_phase_seven_module_layout_exports_expected_symbols() -> None:
+    assert RagasBaseline
+    assert MetaRAGBaseline
+    assert run_baselines
