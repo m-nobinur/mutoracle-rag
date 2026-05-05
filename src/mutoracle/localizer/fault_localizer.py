@@ -63,12 +63,9 @@ class FaultLocalizer:
         """Return a stage-level fault report for one query."""
 
         baseline = self._pipeline.run(query)
-        baseline_scores = score_run(baseline, self._oracles)
-        baseline_omega = self._aggregator.combine(baseline_scores)
-
-        deltas: dict[str, float] = {}
+        scorable_runs = [baseline]
+        operator_runs: list[tuple[str, MutationOperator, RAGRun | None, bool]] = []
         evidence = [
-            f"Baseline composite score: {baseline_omega:.4f}.",
             f"Delta threshold: {self._delta_threshold:.4f}.",
         ]
 
@@ -77,9 +74,9 @@ class FaultLocalizer:
             mutated = operator.apply(baseline, rng=rng)
             mutation = mutated.metadata.get("mutation", {})
             if isinstance(mutation, dict) and mutation.get("rejected") is True:
-                deltas[operator_id] = 0.0
                 reason = mutation.get("rejection_reason", "mutation rejected")
                 evidence.append(f"{operator_id} skipped: {reason}.")
+                operator_runs.append((operator_id, operator, None, False))
                 continue
 
             scored_run = _materialize_scored_run(
@@ -92,8 +89,25 @@ class FaultLocalizer:
                 evidence.append(
                     f"{operator_id} reran pipeline with mutated query for scoring."
                 )
+            scorable_runs.append(scored_run)
+            operator_runs.append((operator_id, operator, scored_run, True))
 
-            mutated_scores = score_run(scored_run, self._oracles)
+        all_scores = score_runs(scorable_runs, self._oracles)
+        baseline_scores = all_scores[0]
+        baseline_omega = self._aggregator.combine(baseline_scores)
+        evidence.insert(0, f"Baseline composite score: {baseline_omega:.4f}.")
+
+        deltas: dict[str, float] = {}
+        score_index = 1
+        for operator_id, operator, operator_run, should_score in operator_runs:
+            if not should_score:
+                deltas[operator_id] = 0.0
+                continue
+            if operator_run is None:
+                msg = f"{operator_id} was marked scorable without a run."
+                raise RuntimeError(msg)
+            mutated_scores = all_scores[score_index]
+            score_index += 1
             mutated_omega = self._aggregator.combine(mutated_scores)
             delta = baseline_omega - mutated_omega
             deltas[operator_id] = delta
@@ -121,10 +135,33 @@ def score_run(
 ) -> dict[str, float]:
     """Score one run with all configured oracles."""
 
-    scores: dict[str, float] = {}
+    return score_runs([run], oracles)[0]
+
+
+def score_runs(
+    runs: Sequence[RAGRun],
+    oracles: Sequence[ScoreOracle],
+) -> list[dict[str, float]]:
+    """Score multiple runs with all configured oracles."""
+
+    scores_by_run: list[dict[str, float]] = [dict() for _ in runs]
+    if not runs:
+        return scores_by_run
     for oracle in oracles:
-        scores[oracle.name] = clamp_score(float(oracle.score(run)))
-    return scores
+        score_results = getattr(oracle, "score_results", None)
+        if callable(score_results):
+            values = [float(result.value) for result in score_results(runs)]
+        else:
+            values = [float(oracle.score(run)) for run in runs]
+        if len(values) != len(runs):
+            msg = (
+                f"Oracle {oracle.name} returned {len(values)} scores "
+                f"for {len(runs)} runs."
+            )
+            raise ValueError(msg)
+        for index, value in enumerate(values):
+            scores_by_run[index][oracle.name] = clamp_score(value)
+    return scores_by_run
 
 
 def compute_stage_deltas(
