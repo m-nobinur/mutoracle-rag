@@ -1,0 +1,32 @@
+experiment:
+  id: e5_latency
+  title: "E5 cost and latency reporting"
+  output_dir: experiments/results/e5_latency
+
+dataset:
+  path: data/rgb/rgb_v1.0.0/rgb_phase8.jsonl
+  split: test
+
+smoke:
+  query_limit: 5
+  seeds: [13, 42, 91]
+
+full:
+  query_limit: 240
+  seeds: [13, 42, 91]
+
+cost_gate:
+  estimated_cost_per_example_usd: 0.0
+  max_estimated_cost_usd: 0.5
+  require_smoke_before_full: true
+
+latency:
+  oracle_mode: real
+  runtime_config: experiments/configs/phase8_real.yaml
+  aggregation: weighted
+  weights:
+    nli: 0.4
+    semantic_similarity: 0.3
+    llm_judge: 0.3
+  delta_threshold: 0.05
+  work_units_per_record: 2
