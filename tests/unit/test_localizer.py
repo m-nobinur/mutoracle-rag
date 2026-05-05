@@ -54,6 +54,41 @@ class MetadataOracle:
         return float(run.metadata["fixture_score"])
 
 
+@dataclass(frozen=True)
+class QueryOnlyPromptMutation:
+    operator_id: str = "QN"
+    stage: Stage = "prompt"
+    name: str = "Query Shift"
+
+    def apply(self, run: RAGRun, *, rng: Random) -> RAGRun:
+        del rng
+        return clone_run(
+            run,
+            query=f"{run.query} not",
+            operator_id=self.operator_id,
+            operator_name=self.name,
+            stage=self.stage,
+        )
+
+
+class QueryDependentPipeline:
+    def run(self, query: str) -> RAGRun:
+        answer = "unsupported answer" if "not" in query.lower() else "supported answer"
+        return RAGRun(
+            query=query,
+            passages=["supported context"],
+            answer=answer,
+            metadata={},
+        )
+
+
+class AnswerSupportOracle:
+    name = "nli"
+
+    def score(self, run: RAGRun) -> float:
+        return 0.2 if run.answer.startswith("unsupported") else 1.0
+
+
 def test_worked_example_attributes_largest_delta_stage() -> None:
     localizer = FaultLocalizer(
         pipeline=StaticPipeline(),
@@ -109,3 +144,29 @@ def test_negative_and_missing_deltas_do_not_create_confidence() -> None:
     assert stage_deltas == {"retrieval": -0.2, "prompt": 0.0, "generation": 0.0}
     assert report.stage == "no_fault_detected"
     assert report.confidence == 0.0
+
+
+def test_prompt_mutations_are_scored_from_rerun_pipeline_outputs() -> None:
+    localizer = FaultLocalizer(
+        pipeline=QueryDependentPipeline(),
+        oracles=[AnswerSupportOracle()],
+        aggregator=UniformAggregator(),
+        delta_threshold=0.1,
+        operators={"QN": QueryOnlyPromptMutation()},
+    )
+
+    report = localizer.diagnose("What is supported?")
+
+    assert report.stage == "prompt"
+    assert report.deltas["QN"] == pytest.approx(0.8)
+
+
+def test_localizer_rejects_delta_threshold_outside_unit_interval() -> None:
+    with pytest.raises(ValueError, match=r"delta_threshold"):
+        FaultLocalizer(
+            pipeline=StaticPipeline(),
+            oracles=[MetadataOracle()],
+            aggregator=UniformAggregator(),
+            delta_threshold=1.1,
+            operators={"CI": ScoreMutation("CI", "retrieval", 0.9)},
+        )
