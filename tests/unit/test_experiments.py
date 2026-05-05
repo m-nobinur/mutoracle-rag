@@ -106,6 +106,21 @@ def test_mutoracle_smoke_writes_phase_eight_artifacts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    dataset_path = tmp_path / "fits.jsonl"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "qid": "rgbp8_test_0001",
+                "query": "Who wrote the notes?",
+                "gt_answer": "Ada Lovelace",
+                "fault_stage": "generation",
+                "split": "test",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
     config_path = tmp_path / "e2_smoke.yaml"
     config_path.write_text(
         "\n".join(
@@ -115,7 +130,7 @@ def test_mutoracle_smoke_writes_phase_eight_artifacts(
                 "  title: E2 test",
                 f"  output_dir: {tmp_path.as_posix()}",
                 "dataset:",
-                "  path: data/fits/fits_v1.0.0/fits.jsonl",
+                f"  path: {dataset_path.as_posix()}",
                 "  split: test",
                 "smoke:",
                 "  query_limit: 1",
@@ -154,7 +169,7 @@ def test_mutoracle_smoke_writes_phase_eight_artifacts(
         title="E2 test",
         mode="smoke",
         config_path=config_path,
-        dataset_path=Path("data/fits/fits_v1.0.0/fits.jsonl"),
+        dataset_path=dataset_path,
         split="test",
         query_limit=1,
         seeds=[13, 42, 91],
