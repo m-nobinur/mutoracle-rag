@@ -5,6 +5,7 @@ from mutoracle.aggregation import (
     UniformAggregator,
     WeightedAggregator,
 )
+from mutoracle.data import build_fits_dataset, validate_fits_records
 from mutoracle.localizer import FaultLocalizer
 from mutoracle.mutations import get_operator, mutation_registry
 from mutoracle.oracles import LLMJudgeOracle, NLIOracle, SemanticSimilarityOracle
@@ -39,3 +40,8 @@ def test_phase_five_module_layout_exports_expected_symbols() -> None:
     assert WeightedAggregator
     assert ConfidenceGatedAggregator
     assert FaultLocalizer
+
+
+def test_phase_six_module_layout_exports_expected_symbols() -> None:
+    assert build_fits_dataset
+    assert validate_fits_records

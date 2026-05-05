@@ -1,0 +1,22 @@
+{
+  "audit_label_correctness": 1.0,
+  "audit_sample_size": 50,
+  "deterministic_checksum": "sha256:0622b4cd2c57cc64887b71f2fedb141b36a0da5942a619b13c5ac39158f119e0",
+  "fits_query_length_mean": 10.45,
+  "labels": {
+    "generation": 75,
+    "no_fault": 75,
+    "prompt": 75,
+    "retrieval": 75
+  },
+  "passed": true,
+  "qid_overlap_count": 0,
+  "query_length_within_tolerance": true,
+  "source_query_length_mean": 10.2,
+  "splits": {
+    "test": 240,
+    "validation": 60
+  },
+  "stratification_within_tolerance": true,
+  "total_examples": 300
+}

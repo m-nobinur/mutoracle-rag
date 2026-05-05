@@ -17,7 +17,7 @@ build/
 data/rgb/
 data/triviaqa/
 data/corpora/
-data/fits/fits_v*/
+data/fits/fits_v*/*.jsonl
 results/**/*.jsonl
 results/**/*.parquet
 results/**/*.duckdb
