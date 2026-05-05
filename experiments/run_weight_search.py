@@ -6,6 +6,7 @@ import argparse
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from random import Random
 from typing import Any
 
 import yaml
@@ -128,9 +129,15 @@ def main() -> None:
 def run_weight_search(*, seed: int = 2026) -> dict[str, Any]:
     """Return the best deterministic grid-search calibration result."""
 
+    rng = Random(seed)
+    weight_candidates = list(candidate_weights())
+    threshold_candidates = list(THRESHOLD_CANDIDATES)
+    rng.shuffle(weight_candidates)
+    rng.shuffle(threshold_candidates)
+
     best: dict[str, Any] | None = None
-    for weights in candidate_weights():
-        for threshold in THRESHOLD_CANDIDATES:
+    for weights in weight_candidates:
+        for threshold in threshold_candidates:
             predictions = [
                 predict_example(example, weights=weights, threshold=threshold)
                 for example in CALIBRATION_EXAMPLES
