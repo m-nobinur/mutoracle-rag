@@ -8,14 +8,16 @@ localization in RAG pipelines. The committed design lock is in
 
 ## Current Status
 
-Phases 1 through 4 are in place:
+Phases 1 through 5 are in place:
 
 - repository bootstrap, typed contracts, config loading, CLI, and quality gates
 - reproducible fixture RAG system under test with OpenRouter generator support
 - seven canonical mutation operators: CI, CR, CS, QP, QN, FS, and FA
 - NLI, semantic-similarity, and LLM-as-judge oracle modules
+- uniform, weighted, and confidence-gated aggregation strategies
+- mutation-delta fault localization with calibrated `FaultReport` output
 - shared SQLite response cache, oracle-score cache, cost ledger, and metadata
-- `mutoracle smoke --queries 10` for credential-free 10-query smoke runs
+- credential-free `smoke`, `mutate`, and `diagnose` CLI paths
 
 ## Quickstart
 
@@ -26,6 +28,7 @@ uv run mutoracle config show
 uv run mutoracle smoke --queries 10
 uv run mutoracle rag smoke
 uv run mutoracle mutate --operator CI
+uv run mutoracle diagnose
 uv run pytest
 ```
 
@@ -55,6 +58,16 @@ inference:
 ```bash
 uv sync --extra oracles --dev
 ```
+
+Aggregation weights and the localizer delta threshold are configured under the
+`aggregation` section. The Phase 5 calibrated config is generated with:
+
+```bash
+uv run python experiments/run_weight_search.py --seed 2026
+```
+
+See [`docs/FAULT_LOCALIZER.md`](docs/FAULT_LOCALIZER.md) for the localizer
+decision rule and report schema.
 
 ## Development Gate
 

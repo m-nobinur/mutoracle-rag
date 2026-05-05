@@ -85,8 +85,6 @@ Exit plan:
 - Live OpenRouter generation goes through the SQLite cache/cost ledger and is
   blocked when configured query or cost budgets are exhausted.
 
-## Next Phase
-
 ## Phase 3: Mutation Engine
 
 Status: complete.
@@ -164,10 +162,46 @@ Exit plan:
 - Invalid judge JSON retries once and then records a structured failure without
   blocking downstream aggregation.
 
+## Phase 5: Aggregation and Localizer
+
+Status: complete.
+
+Completed:
+
+- Added `src/mutoracle/aggregation/` with uniform, weighted, and
+  confidence-gated aggregation strategies.
+- Added config-backed aggregation weights, confidence gates, and
+  `delta_threshold` validation.
+- Added `src/mutoracle/localizer/` with transparent per-operator delta
+  computation, per-stage max deltas, thresholded stage attribution, confidence,
+  and evidence records.
+- Added `mutoracle diagnose`, defaulting to credential-free fixture oracles and
+  supporting `--real-oracles` for configured model-backed scoring.
+- Added deterministic calibration script at `experiments/run_weight_search.py`.
+- Added generated calibrated config at `experiments/configs/calibrated.yaml`.
+- Documented the decision rule, config fields, CLI, and report schema in
+  `docs/FAULT_LOCALIZER.md`.
+
+Validation:
+
+- `uv run python experiments/run_weight_search.py --seed 2026 --output experiments/configs/calibrated.yaml`
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src/mutoracle`
+- `uv run pytest tests/unit/test_aggregation.py tests/unit/test_localizer.py tests/unit/test_calibration.py tests/unit/test_cli.py tests/unit/test_config.py tests/unit/test_phase_layout.py`
+- `uv run mutoracle diagnose`
+
+Exit plan:
+
+- Fixture examples produce stable `FaultReport` records with stage, confidence,
+  per-operator deltas, stage deltas, and evidence.
+- Aggregation weights and localizer thresholds are loaded from YAML config.
+- The package is ready for Phase 6 FITS construction and validation splits.
+
 ## Next Phase
 
-Phase 5 should implement aggregation and fault localization:
+Phase 6 should implement data and FITS:
 
-- uniform, weighted, and confidence-gated score aggregation;
-- per-operator and per-stage score deltas;
-- calibrated `FaultReport` output with stage, confidence, deltas, and evidence.
+- RGB and TriviaQA download/build scripts;
+- Wikipedia/noise corpus subset;
+- frozen FITS v1.0.0 split with manifest, checksums, licenses, and quality gates.

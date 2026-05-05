@@ -1,0 +1,47 @@
+aggregation:
+  confidence_gate_min_oracles: 2
+  confidence_gate_min_score: 0.5
+  delta_threshold: 0.03
+  strategy: weighted
+  weights:
+    llm_judge: 0.4
+    nli: 0.4
+    semantic_similarity: 0.2
+calibration:
+  accuracy: 1.0
+  delta_threshold: 0.03
+  examples: 4
+  predictions:
+  - retrieval
+  - prompt
+  - generation
+  - no_fault_detected
+  seed: 2026
+  weights:
+    llm_judge: 0.4
+    nli: 0.4
+    semantic_similarity: 0.2
+cost:
+  completion_cost_per_1m_tokens: 0.0
+  max_cost_usd: 1.0
+  max_queries: 5
+  prompt_cost_per_1m_tokens: 0.0
+models:
+  generator: openai/gpt-5-nano
+  judge: minimax/minimax-m2.5
+  max_tokens: 512
+  temperature: 0.0
+openrouter:
+  api_key: null
+  app_title: MutOracle-RAG
+  app_url: null
+  base_url: https://openrouter.ai/api/v1
+  timeout_seconds: 60
+oracles:
+  nli_model: MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli
+  semantic_model: sentence-transformers/all-mpnet-base-v2
+rag:
+  top_k: 3
+runtime:
+  cache_path: .mutoracle/dev-cache.sqlite3
+  seed: 2026
