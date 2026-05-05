@@ -182,10 +182,33 @@ def _extract_answer(response: dict[str, Any]) -> str:
         msg = "OpenRouter choice did not include a message object."
         raise RuntimeError(msg)
     content = message.get("content")
-    if not isinstance(content, str) or not content.strip():
-        msg = "OpenRouter choice message did not include text content."
+    if isinstance(content, str) and content.strip():
+        return content.strip()
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, dict):
+                text = item.get("text") or item.get("content")
+                if isinstance(text, str) and text.strip():
+                    parts.append(text.strip())
+            elif isinstance(item, str) and item.strip():
+                parts.append(item.strip())
+        if parts:
+            return "\n".join(parts)
+    finish_reason = first.get("finish_reason")
+    has_reasoning = bool(message.get("reasoning"))
+    if finish_reason == "length":
+        msg = (
+            "OpenRouter choice message did not include text content "
+            f"(finish_reason={finish_reason}, has_reasoning={has_reasoning}). "
+            "Increase models.max_tokens for judge/generation calls."
+        )
         raise RuntimeError(msg)
-    return content.strip()
+    msg = (
+        "OpenRouter choice message did not include text content "
+        f"(finish_reason={finish_reason}, has_reasoning={has_reasoning})."
+    )
+    raise RuntimeError(msg)
 
 
 def _extract_usage(response: dict[str, Any]) -> dict[str, int]:

@@ -1,0 +1,28 @@
+experiment:
+  id: e1_detection
+  title: "E1 response-level detection comparison"
+  output_dir: experiments/results/e1_detection
+
+dataset:
+  path: data/rgb/rgb_v1.0.0/rgb_phase8.jsonl
+  split: test
+
+smoke:
+  query_limit: 5
+  seeds: [13, 42, 91]
+
+full:
+  query_limit: 240
+  seeds: [13, 42, 91]
+
+cost_gate:
+  estimated_cost_per_example_usd: 0.0
+  max_estimated_cost_usd: 0.5
+  require_smoke_before_full: true
+
+baseline:
+  baselines: [ragas, metarag, mutoracle_weighted]
+  evaluator: fixture
+  oracle_mode: real
+  runtime_config: experiments/configs/phase8_real.yaml
+  threshold: 0.5
