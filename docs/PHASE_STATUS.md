@@ -341,7 +341,7 @@ Execution readiness notes:
 - The master-plan dataset matrix still requires RGB-backed runs for E1, E3,
   E5, and E6 in addition to FITS-localization outputs.
 
-## Next Phase
+## Phase 9 Preview
 
 Phase 9 should consume the finalized Phase 8 result artifacts and produce
 analysis and paper assets:
@@ -350,3 +350,79 @@ analysis and paper assets:
   latency, and cost;
 - figures for oracle-delta distributions and confusion matrices;
 - reproducibility notes tying manifests and config snapshots to paper results.
+
+## Phase 9 Status
+
+Phase 9 implementation is complete for the checked-in result artifacts.
+
+Completed:
+
+- Added `experiments/stats.py` with deterministic bootstrap confidence
+  intervals, classification metrics, and confusion-matrix helpers.
+- Added `experiments/analyze_results.py` to import Phase 8 JSONL files into
+  DuckDB and regenerate all planned table, figure, and traceability assets.
+- Generated `paper/tables/tab_detection.tex`,
+  `paper/tables/tab_localization.tex`, `paper/tables/tab_oracle_ablation.tex`,
+  `paper/tables/tab_mutation_discriminativeness.tex`,
+  `paper/tables/tab_latency_cost.tex`, and `paper/tables/tab_aggregation.tex`.
+- Generated SVG figures for the architecture diagram, mutation delta heatmap,
+  aggregation sensitivity heatmap, FITS confusion matrix, and latency/cost bars.
+- Tightened analysis input validation so malformed raw rows with missing or
+  mismatched `experiment_id` values fail clearly before metric generation.
+- Constrained generated SVG layout widths and font sizes for paper-column
+  readability while keeping deterministic output generation.
+- Added `paper/TRACEABILITY.md` so paper assets map back to source result files
+  and Phase 8 run IDs.
+- Added `dev` experiment mode, `make experiment-dev`, progress logging for
+  long-running experiment scripts, `make analysis`, and `make analysis-dev`.
+- Added batched oracle scoring inside `FaultLocalizer.diagnose()`, plus batched
+  NLI and semantic-similarity oracle paths so baseline and mutation scores are
+  evaluated together where the backend supports it.
+
+Validation:
+
+- `uv run python experiments/analyze_results.py --bootstrap-samples 100 --duckdb-path paper/analysis.duckdb`
+- `make experiment-dev`
+- `make analysis-dev`
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run pytest tests/unit/test_analysis_assets.py --no-cov`
+- `uv run pytest`
+
+Exit plan:
+
+- Phase 9 assets regenerate from an empty DuckDB import.
+- Bootstrap CIs are deterministic for a fixed seed.
+- Missing required E1-E6 artifacts fail clearly before metrics are reported.
+- Missing required experiment rows inside imported JSONL files fail clearly
+  before metrics are reported.
+- Current generated assets record their source mode in `paper/TRACEABILITY.md`;
+  regenerate with `--mode full` after full paper-facing runs are available.
+- Development runs use separate `*_dev_*` artifacts so paper-facing `full`
+  outputs remain reserved for final metrics.
+- `uv run python experiments/analyze_results.py --mode full` is expected to fail
+  until full E1-E6 artifacts exist; this gate prevents accidental paper claims
+  from smoke/dev inputs.
+
+## Phase 10 Handoff Status
+
+Phase 10 can start now in provisional mode, but final paper-freeze tasks are
+blocked on full-mode experiment artifacts.
+
+Current state:
+
+- Allowed now: paper drafting structure, methods text, reproducibility docs,
+  and release checklist preparation using smoke/dev assets.
+- Blocked until full artifacts exist: freezing paper metrics, final claims,
+  and final release tagging.
+
+Required handoff commands before final Phase 10 freeze:
+
+- `make experiment-full`
+- `uv run python experiments/analyze_results.py --mode full --duckdb-path paper/analysis.duckdb`
+- `uv run pytest tests/unit/test_analysis_assets.py --no-cov`
+
+Completion signal:
+
+- `paper/TRACEABILITY.md` reports generation from `full` artifacts and Phase 9
+  tables/figures are regenerated from the full E1-E6 manifests.

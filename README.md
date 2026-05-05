@@ -8,7 +8,7 @@ localization in RAG pipelines. The committed design lock is in
 
 ## Current Status
 
-Phases 1 through 7 are in place:
+Phases 1 through 9 are in place:
 
 - repository bootstrap, typed contracts, config loading, CLI, and quality gates
 - reproducible fixture RAG system under test with OpenRouter generator support
@@ -18,6 +18,9 @@ Phases 1 through 7 are in place:
 - mutation-delta fault localization with calibrated `FaultReport` output
 - deterministic Phase 6 data manifests and FITS v1.0.0 build/validation path
 - Phase 7 RAGAS and MetaRAG baseline harnesses with shared result schemas
+- Phase 8 E1-E6 experiment scripts, configs, smoke artifacts, and manifests
+- Phase 9 DuckDB-backed analysis scripts with generated paper tables, figures,
+  and run-ID traceability
 - shared SQLite response cache, oracle-score cache, cost ledger, and metadata
 - credential-free `smoke`, `mutate`, `diagnose`, and `data build` CLI paths
 
@@ -46,6 +49,9 @@ The project source of truth for development settings is
 `experiments/configs/dev.yaml` when that file exists. Use `.env` for secrets,
 especially `OPENROUTER_API_KEY`; the app loads `.env` automatically and masks the
 key in `config show`.
+Read-only Hugging Face access tokens can also live in `.env` as `HF_TOKEN` or
+`HUGGING_FACE_HUB_TOKEN`; the local model stack reads those from the environment
+when it needs hub access.
 
 ```bash
 uv run mutoracle config show
@@ -93,6 +99,29 @@ RAGAS is loaded through the official package adapter when it is installed and an
 evaluator model is configured. See
 [`docs/METARAG_REIMPLEMENTATION.md`](docs/METARAG_REIMPLEMENTATION.md) for the
 MetaRAG deviations and threshold-calibration rule.
+
+## Experiments and Analysis
+
+Phase 8 experiment commands are documented in
+[`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md). Phase 9 analysis assets regenerate
+from saved result artifacts:
+
+```bash
+make experiment-smoke
+make experiment-dev
+make analysis
+make analysis-dev
+uv run python experiments/analyze_results.py --mode full
+```
+
+The analysis script imports raw JSONL into DuckDB, computes deterministic
+bootstrap confidence intervals, writes LaTeX tables under `paper/tables/`, SVG
+figures under `paper/figures/`, and records provenance in
+`paper/TRACEABILITY.md`. Use `dev` mode for small development runs with progress
+logging; `paper/TRACEABILITY.md` records whether the current assets came from
+smoke, dev, or full artifacts. The localizer batches baseline and mutation
+oracle inputs, and repeated runs still reuse the SQLite oracle cache. Final
+paper claims should be regenerated with full-run artifacts.
 
 ## Data and FITS
 
