@@ -109,7 +109,7 @@ def main() -> None:
     args = parser.parse_args()
 
     result = run_weight_search(seed=args.seed)
-    config = load_config(args.config)
+    config = load_config(args.config, apply_environment=False)
     payload = config.model_dump(mode="json")
     payload["openrouter"]["api_key"] = None
     weights = dict(result["weights"])

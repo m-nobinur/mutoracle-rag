@@ -20,6 +20,11 @@ from mutoracle.aggregation.weighted import validate_weights
 
 DEFAULT_CONFIG_PATH = Path("experiments/configs/dev.yaml")
 PROJECT_ENV_PATH = Path(".env")
+EXPECTED_ORACLE_WEIGHT_KEYS = {
+    "nli",
+    "semantic_similarity",
+    "llm_judge",
+}
 
 
 class OpenRouterConfig(BaseModel):
@@ -93,6 +98,22 @@ class AggregationConfig(BaseModel):
     @model_validator(mode="after")
     def _validate_weights(self) -> AggregationConfig:
         if self.strategy != "uniform":
+            keys = set(self.weights)
+            if keys != EXPECTED_ORACLE_WEIGHT_KEYS:
+                missing = sorted(EXPECTED_ORACLE_WEIGHT_KEYS - keys)
+                unexpected = sorted(keys - EXPECTED_ORACLE_WEIGHT_KEYS)
+                details: list[str] = []
+                if missing:
+                    details.append(f"missing={missing}")
+                if unexpected:
+                    details.append(f"unexpected={unexpected}")
+                detail_suffix = ", ".join(details)
+                msg = (
+                    "aggregation.weights keys must match "
+                    "['llm_judge', 'nli', 'semantic_similarity']; "
+                    f"{detail_suffix}."
+                )
+                raise ValueError(msg)
             validate_weights(self.weights)
 
         if self.strategy == "confidence_gated":
@@ -136,13 +157,20 @@ class MutOracleConfig(BaseModel):
     calibration: dict[str, Any] = Field(default_factory=dict)
 
 
-def load_config(path: Path | None = None) -> MutOracleConfig:
+def load_config(
+    path: Path | None = None,
+    *,
+    apply_environment: bool = True,
+) -> MutOracleConfig:
     """Load config from YAML plus secret/environment overrides."""
 
-    _load_project_env()
+    if apply_environment:
+        _load_project_env()
     resolved_path = resolve_config_path(path)
     raw = _read_yaml(resolved_path) if resolved_path else {}
     config = MutOracleConfig.model_validate(raw)
+    if not apply_environment:
+        return config
     return _apply_environment(config, allow_runtime_overrides=resolved_path is None)
 
 

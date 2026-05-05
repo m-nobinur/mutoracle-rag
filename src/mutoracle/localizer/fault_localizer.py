@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from random import Random
@@ -55,7 +56,7 @@ class FaultLocalizer:
             msg = "delta_threshold must be in [0, 1]."
             raise ValueError(msg)
         self._delta_threshold = delta_threshold
-        self._operators = dict(operators or mutation_registry())
+        self._operators = dict(mutation_registry() if operators is None else operators)
         self._seed = seed
 
     def diagnose(self, query: str) -> FaultReport:
@@ -64,7 +65,6 @@ class FaultLocalizer:
         baseline = self._pipeline.run(query)
         baseline_scores = score_run(baseline, self._oracles)
         baseline_omega = self._aggregator.combine(baseline_scores)
-        rng = Random(self._seed)
 
         deltas: dict[str, float] = {}
         evidence = [
@@ -73,6 +73,7 @@ class FaultLocalizer:
         ]
 
         for operator_id, operator in self._operators.items():
+            rng = _operator_rng(self._seed, operator_id)
             mutated = operator.apply(baseline, rng=rng)
             mutation = mutated.metadata.get("mutation", {})
             if isinstance(mutation, dict) and mutation.get("rejected") is True:
@@ -208,3 +209,10 @@ def _materialize_scored_run(
         answer=rerun.answer,
         metadata=metadata,
     )
+
+
+def _operator_rng(seed: int, operator_id: str) -> Random:
+    """Return a deterministic operator-scoped RNG independent of iteration order."""
+
+    digest = hashlib.sha256(f"{seed}:{operator_id}".encode()).digest()
+    return Random(int.from_bytes(digest[:8], "big", signed=False))

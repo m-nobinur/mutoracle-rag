@@ -20,6 +20,9 @@ class ConfidenceGatedAggregator:
 
     def __post_init__(self) -> None:
         WeightedAggregator(self.weights)
+        if self.min_score < 0.0 or self.min_score > 1.0:
+            msg = "min_score must be in [0, 1]."
+            raise ValueError(msg)
         if self.min_passing_oracles < 1:
             msg = "min_passing_oracles must be at least 1."
             raise ValueError(msg)
