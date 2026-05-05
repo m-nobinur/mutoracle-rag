@@ -21,5 +21,7 @@ data/fits/fits_v*/*.jsonl
 results/**/*.jsonl
 results/**/*.parquet
 results/**/*.duckdb
+paper/*.duckdb
+experiments/results/**/*_dev_*
 experiments/results/**/*.jsonl
 experiments/results/**/*.manifest.json

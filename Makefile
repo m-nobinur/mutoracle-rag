@@ -1,4 +1,4 @@
-.PHONY: install format lint type test check cli smoke mutate data baseline experiment-smoke experiment-full
+.PHONY: install format lint type test check cli smoke mutate data baseline experiment-smoke experiment-dev experiment-full analysis analysis-dev
 
 install:
 	uv sync --all-extras --dev
@@ -40,6 +40,14 @@ experiment-smoke:
 	uv run python experiments/run_latency.py --config experiments/configs/e5_latency.yaml --smoke
 	uv run python experiments/run_ablation.py --config experiments/configs/e6_weighted.yaml --smoke
 
+experiment-dev:
+	uv run python experiments/run_baselines.py --experiment-config experiments/configs/e1_detection.yaml --mode dev --progress-every 5
+	uv run python experiments/run_mutoracle.py --config experiments/configs/e2_localization.yaml --mode dev --progress-every 5
+	uv run python experiments/run_ablation.py --config experiments/configs/e3_ablation.yaml --mode dev --progress-every 5
+	uv run python experiments/run_ablation.py --config experiments/configs/e4_separability.yaml --mode dev --progress-every 5
+	uv run python experiments/run_latency.py --config experiments/configs/e5_latency.yaml --mode dev --progress-every 5
+	uv run python experiments/run_ablation.py --config experiments/configs/e6_weighted.yaml --mode dev --progress-every 5
+
 experiment-full:
 	uv run python experiments/run_baselines.py --experiment-config experiments/configs/e1_detection.yaml --mode full
 	uv run python experiments/run_mutoracle.py --config experiments/configs/e2_localization.yaml --mode full
@@ -47,3 +55,9 @@ experiment-full:
 	uv run python experiments/run_ablation.py --config experiments/configs/e4_separability.yaml --mode full
 	uv run python experiments/run_latency.py --config experiments/configs/e5_latency.yaml --mode full
 	uv run python experiments/run_ablation.py --config experiments/configs/e6_weighted.yaml --mode full
+
+analysis:
+	uv run python experiments/analyze_results.py
+
+analysis-dev:
+	uv run python experiments/analyze_results.py --mode dev
