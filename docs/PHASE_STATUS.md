@@ -288,11 +288,65 @@ Exit plan:
 
 ## Next Phase
 
-Phase 8 should implement the planned experiments:
+Phase 8 implementation is complete, and phase-exit execution is in progress.
 
-- E1 response-level detection comparison against RAGAS and MetaRAG;
-- E2 FITS fault-attribution accuracy;
-- E3 oracle ablations;
-- E4 mutation/operator separability analysis;
-- E5 cost and latency reporting;
-- E6 weighted aggregation comparison.
+Completed:
+
+- Added the E1-E6 experiment config suite under `experiments/configs/`.
+- Added a shared Phase 8 experiment helper layer for config snapshots, raw
+  JSONL output, summary CSVs, DuckDB import SQL, enriched manifests, failure
+  logs, cost estimates, cost confirmation gates, `OPENROUTER_DAILY_USD_CAP`
+  handling, and smoke-before-full checks.
+- Added `experiments/run_mutoracle.py` for E2 FITS fault-attribution records.
+- Upgraded `experiments/run_baselines.py` with a Phase 8 config-driven path for
+  E1 detection comparison across RAGAS, MetaRAG, and a MutOracle detection
+  variant while preserving the Phase 7 fixture CLI.
+- Added `experiments/run_ablation.py` for E3 oracle ablations, E4 mutation
+  operator ablations, and E6 aggregation comparisons.
+- Added `experiments/run_latency.py` for E5 cost, latency, model ID, and
+  overhead records.
+- Added `docs/EXPERIMENT_PROTOCOL.md`, `docs/EXPERIMENTS.md`,
+  `make experiment-smoke`, and `make experiment-full`.
+- Added tests covering config presence, cost-gate blocking, smoke artifact
+  creation, config snapshots, and seed recording.
+
+Validation:
+
+- `uv run python experiments/run_mutoracle.py --config experiments/configs/e2_localization.yaml --mode smoke`
+- `uv run python experiments/run_baselines.py --experiment-config experiments/configs/e1_detection.yaml --mode smoke`
+- `uv run python experiments/run_ablation.py --config experiments/configs/e3_ablation.yaml --mode smoke`
+- `uv run python experiments/run_ablation.py --config experiments/configs/e4_separability.yaml --mode smoke`
+- `uv run python experiments/run_latency.py --config experiments/configs/e5_latency.yaml --mode smoke`
+- `uv run python experiments/run_ablation.py --config experiments/configs/e6_weighted.yaml --mode smoke`
+- `uv run mutoracle smoke --queries 20`
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src/mutoracle`
+- `uv run pytest`
+
+Exit plan:
+
+- E1-E6 can produce smoke outputs and full result records from config files.
+- Every script writes raw JSONL, summary CSV, config snapshot, manifest, and
+  failure log artifacts, plus DuckDB import SQL.
+- Seeds `13`, `42`, and `91` are recorded in configs and manifests.
+- Cost gates block above-cap runs unless confirmed.
+- Full mode is protected by smoke-before-full gating.
+
+Execution readiness notes:
+
+- Smoke outputs for E1-E6 are present and reproducible.
+- Full E1-E6 records across seeds are still required before declaring full
+  Phase 8 exit.
+- The master-plan dataset matrix still requires RGB-backed runs for E1, E3,
+  E5, and E6 in addition to FITS-localization outputs.
+
+## Next Phase
+
+Phase 9 should consume the finalized Phase 8 result artifacts and produce
+analysis and paper assets:
+
+- generated tables for detection F1, FITS attribution accuracy, ablations,
+  latency, and cost;
+- figures for oracle-delta distributions and confusion matrices;
+- reproducibility notes tying manifests and config snapshots to paper results.

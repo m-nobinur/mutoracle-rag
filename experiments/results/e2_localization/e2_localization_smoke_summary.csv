@@ -1,0 +1,7 @@
+accuracy,correct,examples,expected_stage,experiment_id,seed
+1.0,5,5,,e2_localization,13
+1.0,5,5,,e2_localization,42
+1.0,5,5,,e2_localization,91
+1.0,15,15,,e2_localization,all
+1.0,15,15,retrieval,e2_localization,
+1.0,15,15,all,e2_localization,

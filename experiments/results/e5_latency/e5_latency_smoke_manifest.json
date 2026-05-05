@@ -1,0 +1,56 @@
+{
+  "config_snapshot_yaml": "experiments/results/e5_latency/e5_latency_smoke_config_snapshot.yaml",
+  "cost_cap_usd": 0.5,
+  "dataset_checksum": "e80370334a593590abeaa5935dc30ba72962e45579f068940c42a0eef02327fd",
+  "dataset_path": "data/rgb/rgb_v1.0.0/rgb_phase8.jsonl",
+  "duckdb_sql": "experiments/results/e5_latency/e5_latency_smoke_duckdb.sql",
+  "estimated_cost_usd": 0.0,
+  "experiment_id": "e5_latency",
+  "failure_count": 0,
+  "failures_jsonl": "experiments/results/e5_latency/e5_latency_smoke_failures.jsonl",
+  "git_commit": "2236cee62f391fc036032cb66c010ea5312183c5",
+  "latency_seconds": 0.024366,
+  "metadata": {
+    "script": "experiments/run_latency.py"
+  },
+  "mode": "smoke",
+  "model_ids": [
+    "fixture-rgb-generator",
+    "fixture-fits-generator",
+    "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+    "sentence-transformers/all-mpnet-base-v2",
+    "google/gemini-2.5-flash-lite"
+  ],
+  "openrouter_daily_usd_cap": null,
+  "provider_routing": [
+    "fixture",
+    "openrouter"
+  ],
+  "query_limit": 5,
+  "raw_jsonl": "experiments/results/e5_latency/e5_latency_smoke_raw.jsonl",
+  "row_count": 30,
+  "run_id": "578e90f572289ae0",
+  "sdk_versions": {
+    "mutoracle-rag": "0.1.0",
+    "openai": "2.33.0",
+    "pydantic": "2.13.3",
+    "python": "3.12.13",
+    "pyyaml": "6.0.3",
+    "typer": "0.25.1"
+  },
+  "seeds": [
+    13,
+    42,
+    91
+  ],
+  "split": "test",
+  "status": "complete",
+  "summary_csv": "experiments/results/e5_latency/e5_latency_smoke_summary.csv",
+  "title": "E5 cost and latency reporting",
+  "token_counts": {
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0
+  },
+  "written_at": "2026-05-05T16:25:04.762136+00:00"
+}
