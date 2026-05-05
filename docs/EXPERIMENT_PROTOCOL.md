@@ -47,6 +47,20 @@ make experiment-full
 If you intentionally bypass smoke handoff for a one-off debug run, call the
 script directly with `--confirmed-smoke` and record that override in your notes.
 
+## Development Suite
+
+Use `dev` mode for implementation checks that are larger than smoke but smaller
+than the paper-facing full suite:
+
+```bash
+make experiment-dev
+make analysis-dev
+```
+
+Development artifacts are written as `*_dev_*` files, so they do not overwrite
+smoke or full outputs. The checked-in dev configuration uses 20 queries and seed
+`13`; use full mode when freezing paper metrics.
+
 ## Experiment Matrix
 
 | ID | Config | Script | Output target |
@@ -72,3 +86,43 @@ deviations, confidence intervals, and significance tests from saved files.
  the planned dataset matrix (RGB-driven E1/E3/E5/E6 plus FITS localization).
 - Treat the current smoke outputs as plumbing validation, not final reported
  metrics.
+
+## Phase 9 Analysis
+
+Generate analysis assets from saved results with:
+
+```bash
+uv run python experiments/analyze_results.py --mode smoke
+```
+
+The script imports raw JSONL files into DuckDB, computes deterministic bootstrap
+confidence intervals, writes LaTeX tables and SVG figures, and emits
+`paper/TRACEABILITY.md` so each table cell maps back to a run ID and source
+result file. Missing required E1-E6 result artifacts fail before any metrics are
+reported. Use `--mode dev` for development artifacts. After full runs exist,
+regenerate the same assets with `--mode full`.
+
+## Phase 9 to Phase 10 Handoff
+
+Start Phase 10 writing and packaging work in two steps:
+
+1. Provisional handoff (allowed now):
+   - use the checked-in smoke/dev assets for drafting structure, figure/table
+     placement, and reproducibility text;
+   - keep all paper-facing claims marked as provisional until full artifacts are
+     generated.
+2. Final handoff (required before freezing results):
+   - run the full E1-E6 suite and regenerate Phase 9 assets in full mode;
+   - verify `paper/TRACEABILITY.md` is generated from `full` artifacts before
+     finalizing paper numbers.
+
+Recommended final handoff commands:
+
+```bash
+make experiment-full
+uv run python experiments/analyze_results.py --mode full --duckdb-path paper/analysis.duckdb
+uv run pytest tests/unit/test_analysis_assets.py --no-cov
+```
+
+Do not promote Phase 9 metrics to final paper claims while
+`uv run python experiments/analyze_results.py --mode full` fails.

@@ -27,6 +27,23 @@ smoke manifest exists, unless the operator explicitly passes
 `--confirmed-smoke`. Estimated costs are checked before work starts; runs above
 the configured cap require `--confirm-cost`.
 
+For day-to-day development, use the smaller `dev` mode instead of `full`:
+
+```bash
+make experiment-dev
+make analysis-dev
+```
+
+`dev` mode writes separate `*_dev_*` artifacts, uses 20 queries and seed `13`,
+and prints progress updates while each script is running. `full` mode remains
+the paper-facing configuration and should be run only when freezing final
+results for the paper.
+
+The localizer batches the baseline and mutation oracle inputs within each
+diagnosis. NLI and semantic-similarity backends use their batch APIs for
+uncached scores, while the SQLite cache still handles repeated runs and
+aggregation variants.
+
 Current state:
 
 - Smoke outputs are available for E1-E6 and are suitable for workflow
@@ -45,3 +62,19 @@ Current state:
 | E4 | `e4_separability.yaml` | `run_ablation.py` | Mutation/operator ablation and delta records |
 | E5 | `e5_latency.yaml` | `run_latency.py` | Cost, latency, and overhead reporting |
 | E6 | `e6_weighted.yaml` | `run_ablation.py` | Uniform, weighted, and confidence-gated aggregation comparison |
+
+## Phase 9 Analysis Assets
+
+Phase 9 consumes the saved Phase 8 artifacts and regenerates paper-ready tables,
+figures, and run-ID traceability without hand-entered metrics:
+
+```bash
+uv run python experiments/analyze_results.py
+```
+
+The default command reads smoke artifacts from `experiments/results/` and writes
+LaTeX tables under `paper/tables/`, SVG figures under `paper/figures/`, and
+`paper/TRACEABILITY.md`. Use `--mode dev` for development artifacts and
+`--mode full` after full E1-E6 runs are available. The optional
+`--duckdb-path paper/analysis.duckdb` flag materializes the imported DuckDB
+database for inspection; generated `.duckdb` files are ignored by Git.
