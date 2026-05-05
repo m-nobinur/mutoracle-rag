@@ -92,9 +92,22 @@ class AggregationConfig(BaseModel):
 
     @model_validator(mode="after")
     def _validate_weights(self) -> AggregationConfig:
-        validate_weights(self.weights)
-        if self.confidence_gate_min_score > 1.0:
-            msg = "confidence_gate_min_score must be in [0, 1]."
+        if self.strategy != "uniform":
+            validate_weights(self.weights)
+
+        if self.strategy == "confidence_gated":
+            if self.confidence_gate_min_score > 1.0:
+                msg = "confidence_gate_min_score must be in [0, 1]."
+                raise ValueError(msg)
+            if self.confidence_gate_min_oracles > len(self.weights):
+                msg = (
+                    "confidence_gate_min_oracles cannot exceed the number of "
+                    "configured oracle weights."
+                )
+                raise ValueError(msg)
+
+        if self.delta_threshold > 1.0:
+            msg = "delta_threshold must be in [0, 1]."
             raise ValueError(msg)
         return self
 

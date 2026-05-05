@@ -23,6 +23,12 @@ class ConfidenceGatedAggregator:
         if self.min_passing_oracles < 1:
             msg = "min_passing_oracles must be at least 1."
             raise ValueError(msg)
+        if self.min_passing_oracles > len(self.weights):
+            msg = (
+                "min_passing_oracles cannot exceed the number of configured "
+                "oracle weights."
+            )
+            raise ValueError(msg)
 
     def combine(self, scores: dict[str, float]) -> float:
         """Return weighted score only when enough oracle scores pass the gate."""
