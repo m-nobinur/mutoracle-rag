@@ -4,12 +4,13 @@ import json
 import sys
 from importlib import util
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
 from mutoracle.cache import UsageSummary
 from mutoracle.config import MutOracleConfig
+from mutoracle.contracts import RAGRun
 from mutoracle.experiments import (
     ExperimentRunSettings,
     artifact_paths,
@@ -488,6 +489,76 @@ def test_aggregator_cost_and_full_run_helpers(
     ensure_full_run_allowed(
         smoke_settings, paths=artifact_paths(smoke_settings), confirmed_smoke=False
     )
+
+
+def test_mutoracle_detection_baseline_reuses_real_oracles(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_script("experiments/run_baselines.py")
+    call_counter = {"real_oracles": 0}
+
+    class StubOracle:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def score_result(self, run: object) -> object:
+            del run
+            return SimpleNamespace(value=1.0, metadata={})
+
+    class StubLocalizer:
+        def __init__(
+            self,
+            *,
+            pipeline: object,
+            oracles: list[StubOracle],
+            aggregator: object,
+            delta_threshold: float,
+            seed: int,
+        ) -> None:
+            del pipeline, oracles, aggregator, delta_threshold, seed
+
+        def diagnose(self, query: str) -> object:
+            del query
+            return SimpleNamespace(
+                stage="no_fault_detected",
+                confidence=0.1,
+                stage_deltas={"prompt": 0.0},
+            )
+
+    def fake_real_oracles(
+        names: list[str],
+        *,
+        config: MutOracleConfig,
+        ledger: object,
+    ) -> list[StubOracle]:
+        del config, ledger
+        call_counter["real_oracles"] += 1
+        return [StubOracle(name) for name in names]
+
+    monkeypatch.setattr(module, "real_oracles", fake_real_oracles)
+    monkeypatch.setattr(module, "FaultLocalizer", StubLocalizer)
+    monkeypatch.setattr(
+        module,
+        "fault_report_to_dict",
+        lambda report: {"deltas": {}, "stage_deltas": report.stage_deltas},
+    )
+
+    baseline = module.MutOracleDetectionBaseline(
+        oracle_mode="real",
+        runtime_config=MutOracleConfig(),
+        ledger=None,
+    )
+    run = RAGRun(
+        query="Who wrote the notes?",
+        passages=["Ada wrote the notes."],
+        answer="Ada wrote the notes.",
+        metadata={"generation": {"model": "fixture-fits-generator", "seed": 13}},
+    )
+
+    baseline.run(run)
+    baseline.run(run)
+
+    assert call_counter["real_oracles"] == 1
 
 
 def _load_script(path: str) -> ModuleType:

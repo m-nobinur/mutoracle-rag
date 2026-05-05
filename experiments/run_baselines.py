@@ -32,6 +32,7 @@ from mutoracle.experiments import (
     ensure_full_run_allowed,
     estimate_cost_usd,
     expected_detection_label,
+    fixture_model_ids,
     fixture_oracles,
     load_experiment_config,
     load_runtime_config,
@@ -415,6 +416,36 @@ class MutOracleDetectionBaseline:
         self._oracle_mode = oracle_mode
         self._runtime_config = runtime_config
         self._ledger = ledger
+        self._oracle_names = ["nli", "semantic_similarity", "llm_judge"]
+        self._configured_oracles = (
+            fixture_oracles(self._oracle_names)
+            if self._oracle_mode == "fixture"
+            else real_oracles(
+                self._oracle_names,
+                config=self._runtime_config,
+                ledger=self._ledger,
+            )
+        )
+        self._aggregator = build_experiment_aggregator(
+            strategy="weighted",
+            weights={
+                "nli": 0.4,
+                "semantic_similarity": 0.3,
+                "llm_judge": 0.3,
+            },
+        )
+        self._provider_route = provider_route_for_oracles(
+            mode="fixture" if self._runtime_config is None else "real",
+            oracle_names=self._oracle_names,
+        )
+        self._oracle_model_ids = (
+            fixture_model_ids(self._oracle_names)
+            if self._runtime_config is None
+            else real_model_ids(
+                self._oracle_names,
+                config=self._runtime_config,
+            )
+        )
 
     def run(
         self,
@@ -428,27 +459,10 @@ class MutOracleDetectionBaseline:
         usage_before = (
             self._ledger.usage_summary() if self._ledger is not None else None
         )
-        oracle_names = ["nli", "semantic_similarity", "llm_judge"]
-        configured_oracles = (
-            fixture_oracles(oracle_names)
-            if self._oracle_mode == "fixture"
-            else real_oracles(
-                oracle_names,
-                config=self._runtime_config,
-                ledger=self._ledger,
-            )
-        )
         localizer = FaultLocalizer(
             pipeline=FixedRunPipeline(run),
-            oracles=configured_oracles,
-            aggregator=build_experiment_aggregator(
-                strategy="weighted",
-                weights={
-                    "nli": 0.4,
-                    "semantic_similarity": 0.3,
-                    "llm_judge": 0.3,
-                },
-            ),
+            oracles=self._configured_oracles,
+            aggregator=self._aggregator,
             delta_threshold=0.05,
             seed=int(run.metadata.get("generation", {}).get("seed", 2026)),
         )
@@ -476,23 +490,11 @@ class MutOracleDetectionBaseline:
         generation_model = str(
             run.metadata.get("generation", {}).get("model", "fixture")
         )
-        model_ids = (
-            [
-                generation_model,
-                "fixture-nli",
-                "fixture-semantic-similarity",
-                "fixture-llm-judge",
-            ]
-            if self._runtime_config is None
-            else real_model_ids(
-                oracle_names,
-                config=self._runtime_config,
-                generation_model=generation_model,
-            )
-        )
-        provider_route = provider_route_for_oracles(
-            mode="fixture" if self._runtime_config is None else "real",
-            oracle_names=oracle_names,
+        model_ids = [generation_model]
+        model_ids.extend(
+            model_id
+            for model_id in self._oracle_model_ids
+            if model_id != generation_model
         )
         return BaselineResult(
             run_id=run_id_for(run),
@@ -512,7 +514,7 @@ class MutOracleDetectionBaseline:
                 "stage": report.stage,
                 "stage_deltas": report.stage_deltas,
                 "operator_deltas": fault_report_to_dict(report)["deltas"],
-                "provider_route": provider_route,
+                "provider_route": self._provider_route,
                 "cost_scope": (
                     "oracle_usage"
                     if self._runtime_config is not None
