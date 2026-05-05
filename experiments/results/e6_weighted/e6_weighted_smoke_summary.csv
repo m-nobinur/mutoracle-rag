@@ -1,0 +1,9 @@
+ablation_name,accuracy,correct,examples,experiment_id,seed
+confidence_gated,1.0,15,15,e6_weighted,
+uniform,0.333333,5,15,e6_weighted,
+weighted_calibrated,0.2,3,15,e6_weighted,
+all,0.511111,23,45,e6_weighted,
+,0.4,6,15,e6_weighted,13
+,0.4,6,15,e6_weighted,42
+,0.733333,11,15,e6_weighted,91
+,0.511111,23,45,e6_weighted,all

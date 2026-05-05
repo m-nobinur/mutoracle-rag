@@ -1,0 +1,3 @@
+examples,experiment_id,mean_cost_usd,mean_latency_seconds,mean_overhead_vs_rag,workflow
+15,e5_latency,0.0,0.001619,616.336842,mutoracle_localizer
+15,e5_latency,0.0,3e-06,1.0,rag_fixture

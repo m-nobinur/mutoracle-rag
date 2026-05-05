@@ -1,0 +1,64 @@
+{
+  "config_snapshot_yaml": "experiments/results/e3_ablation/e3_ablation_smoke_config_snapshot.yaml",
+  "cost_cap_usd": 0.5,
+  "dataset_checksum": "e80370334a593590abeaa5935dc30ba72962e45579f068940c42a0eef02327fd",
+  "dataset_path": "data/rgb/rgb_v1.0.0/rgb_phase8.jsonl",
+  "duckdb_sql": "experiments/results/e3_ablation/e3_ablation_smoke_duckdb.sql",
+  "estimated_cost_usd": 0.0,
+  "experiment_id": "e3_ablation",
+  "failure_count": 0,
+  "failures_jsonl": "experiments/results/e3_ablation/e3_ablation_smoke_failures.jsonl",
+  "git_commit": "72f6969db1e881ccad8f538903bdea901cad1c2a",
+  "latency_seconds": 0.133874,
+  "metadata": {
+    "script": "experiments/run_ablation.py",
+    "variant_names": [
+      "nli_only",
+      "semantic_only",
+      "judge_only",
+      "all_oracles_uniform",
+      "leave_one_out_no_nli",
+      "leave_one_out_no_semantic",
+      "leave_one_out_no_judge"
+    ]
+  },
+  "mode": "smoke",
+  "model_ids": [
+    "fixture-fits-generator",
+    "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+    "sentence-transformers/all-mpnet-base-v2",
+    "google/gemini-2.5-flash-lite"
+  ],
+  "openrouter_daily_usd_cap": null,
+  "provider_routing": [
+    "local_models",
+    "openrouter"
+  ],
+  "query_limit": 5,
+  "raw_jsonl": "experiments/results/e3_ablation/e3_ablation_smoke_raw.jsonl",
+  "row_count": 105,
+  "run_id": "924cddad48636cb1",
+  "sdk_versions": {
+    "mutoracle-rag": "0.1.0",
+    "openai": "2.33.0",
+    "pydantic": "2.13.3",
+    "python": "3.12.13",
+    "pyyaml": "6.0.3",
+    "typer": "0.25.1"
+  },
+  "seeds": [
+    13,
+    42,
+    91
+  ],
+  "split": "test",
+  "status": "complete",
+  "summary_csv": "experiments/results/e3_ablation/e3_ablation_smoke_summary.csv",
+  "title": "E3 oracle ablation study",
+  "token_counts": {
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0
+  },
+  "written_at": "2026-05-05T15:17:06.577056+00:00"
+}

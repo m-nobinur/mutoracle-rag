@@ -1,0 +1,13 @@
+ablation_name,accuracy,correct,examples,experiment_id,seed
+all_oracles_uniform,0.866667,13,15,e3_ablation,
+judge_only,0.333333,5,15,e3_ablation,
+leave_one_out_no_judge,1.0,15,15,e3_ablation,
+leave_one_out_no_nli,0.4,6,15,e3_ablation,
+leave_one_out_no_semantic,0.4,6,15,e3_ablation,
+nli_only,1.0,15,15,e3_ablation,
+semantic_only,1.0,15,15,e3_ablation,
+all,0.714286,75,105,e3_ablation,
+,0.742857,26,35,e3_ablation,13
+,0.771429,27,35,e3_ablation,42
+,0.628571,22,35,e3_ablation,91
+,0.714286,75,105,e3_ablation,all
