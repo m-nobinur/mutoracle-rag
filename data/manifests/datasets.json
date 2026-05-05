@@ -1,0 +1,34 @@
+{
+  "datasets": [
+    {
+      "checksum": "sha256:1ddc48de22247a7396a9b3e6e293b22643afbca81978a6711183d212750089c5",
+      "dataset_id": "rgb",
+      "date": "2026-05-05",
+      "license": "source license; verify upstream before redistribution",
+      "name": "RGB Benchmark",
+      "notes": "Primary RAG evaluation source. The offline build uses a schema-compatible fixture preview until raw downloads are staged.",
+      "revision": "phase6-fixture-preview",
+      "url": "https://github.com/chen700564/RGB"
+    },
+    {
+      "checksum": "sha256:0dbd83c31f85869bc7de2b6c6de2aac9912dfd0270fb429d0bb02e77cc32a828",
+      "dataset_id": "triviaqa",
+      "date": "2026-05-05",
+      "license": "Apache-2.0",
+      "name": "TriviaQA filtered subset",
+      "notes": "Generalization and FITS source. The Phase 6 loader keeps a local deterministic subset for offline reproducibility.",
+      "revision": "phase6-fixture-preview",
+      "url": "https://huggingface.co/datasets/mandarjoshi/trivia_qa"
+    },
+    {
+      "checksum": "sha256:d55c217973accabb37d17c254505519387af752970a44d7a5f29541358a8d5d1",
+      "dataset_id": "wikipedia_noise",
+      "date": "2026-05-05",
+      "license": "CC BY-SA 3.0",
+      "name": "Wikipedia/noise passage pool",
+      "notes": "Distractor pool used for CI and FITS generation faults.",
+      "revision": "phase6-fixture-preview",
+      "url": "https://huggingface.co/datasets/wikimedia/wikipedia"
+    }
+  ]
+}

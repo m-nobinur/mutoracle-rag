@@ -1,4 +1,4 @@
-.PHONY: install format lint type test check cli smoke mutate
+.PHONY: install format lint type test check cli smoke mutate data
 
 install:
 	uv sync --all-extras --dev
@@ -25,3 +25,6 @@ smoke:
 
 mutate:
 	uv run mutoracle mutate --operator CI
+
+data:
+	uv run mutoracle data build

@@ -198,10 +198,53 @@ Exit plan:
 - Aggregation weights and localizer thresholds are loaded from YAML config.
 - The package is ready for Phase 6 FITS construction and validation splits.
 
+## Phase 6: Data and FITS
+
+Status: complete.
+
+Completed:
+
+- Added `src/mutoracle/data/` with source manifests, deterministic RGB and
+  TriviaQA subset loaders, a Wikipedia/noise pool builder, FITS schema models,
+  JSONL writing, checksums, and validation.
+- Added `uv run mutoracle data build` and `uv run mutoracle fits build` for the
+  Phase 6 data path.
+- Added `data/README.md` manifest documentation and
+  `data/fits/build_fits.py` as the script entry point requested by the phase
+  plan.
+- Added FITS v1.0.0 output generation with 75 examples each for retrieval,
+  prompt, generation, and no-fault labels.
+- Implemented prompt-stage FITS injection with canonical QN when supported and
+  deterministic controlled-prompt fallback when QN rejects unsupported grammar.
+- Added validation/test splits with no `qid` overlap and deterministic artifact
+  checksums for fixed seeds.
+- Added a 50-example audit sample and quality-gate report with label
+  correctness threshold tracking.
+- Added query-length distribution gate tracking source vs. FITS mean query
+  lengths.
+- Enforced frozen artifact behavior: existing `fits_v1.0.0` artifacts are reused
+  by default and can only be rebuilt intentionally with `--force`.
+- Documented the FITS schema, files, and quality gates in
+  `docs/FITS_DATASET.md`.
+
+Validation:
+
+- `uv run ruff check src/mutoracle/data/fits.py src/mutoracle/cli.py tests/unit/test_data_fits.py data/fits/build_fits.py`
+- `uv run mypy src/mutoracle`
+- `uv run pytest tests/unit/test_data_fits.py`
+- `uv run pytest tests/unit/test_cli.py tests/unit/test_phase_layout.py`
+- `uv run pytest`
+- `uv run mutoracle fits build --force`
+
+Exit plan:
+
+- FITS v1.0.0 is frozen locally with manifest, dataset card, quality-gate
+  report, checksums, source provenance, and deterministic rebuild controls.
+
 ## Next Phase
 
-Phase 6 should implement data and FITS:
+Phase 7 should implement baselines:
 
-- RGB and TriviaQA download/build scripts;
-- Wikipedia/noise corpus subset;
-- frozen FITS v1.0.0 split with manifest, checksums, licenses, and quality gates.
+- official RAGAS harness on shared RAG outputs;
+- documented MetaRAG reimplementation;
+- baseline configs, thresholds, and result manifests for later experiments.

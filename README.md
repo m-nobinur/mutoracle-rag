@@ -8,7 +8,7 @@ localization in RAG pipelines. The committed design lock is in
 
 ## Current Status
 
-Phases 1 through 5 are in place:
+Phases 1 through 6 are in place:
 
 - repository bootstrap, typed contracts, config loading, CLI, and quality gates
 - reproducible fixture RAG system under test with OpenRouter generator support
@@ -16,8 +16,9 @@ Phases 1 through 5 are in place:
 - NLI, semantic-similarity, and LLM-as-judge oracle modules
 - uniform, weighted, and confidence-gated aggregation strategies
 - mutation-delta fault localization with calibrated `FaultReport` output
+- deterministic Phase 6 data manifests and FITS v1.0.0 build/validation path
 - shared SQLite response cache, oracle-score cache, cost ledger, and metadata
-- credential-free `smoke`, `mutate`, and `diagnose` CLI paths
+- credential-free `smoke`, `mutate`, `diagnose`, and `data build` CLI paths
 
 ## Quickstart
 
@@ -29,6 +30,7 @@ uv run mutoracle smoke --queries 10
 uv run mutoracle rag smoke
 uv run mutoracle mutate --operator CI
 uv run mutoracle diagnose
+uv run mutoracle data build
 uv run pytest
 ```
 
@@ -68,6 +70,27 @@ uv run python experiments/run_weight_search.py --seed 2026
 
 See [`docs/FAULT_LOCALIZER.md`](docs/FAULT_LOCALIZER.md) for the localizer
 decision rule and report schema.
+
+## Data and FITS
+
+Phase 6 builds source manifests and a deterministic FITS fault-injection split:
+
+```bash
+uv run mutoracle data build
+```
+
+If `data/fits/fits_v1.0.0` already exists, the command reuses the frozen
+artifact paths without rewriting files. To intentionally rebuild that version,
+run:
+
+```bash
+uv run mutoracle fits build --force
+```
+
+The command writes dataset provenance to `data/manifests/datasets.json`, the
+FITS build manifest to `data/fits/manifest.json`, and versioned validation/test
+JSONL files under `data/fits/fits_v1.0.0/`. See
+[`docs/FITS_DATASET.md`](docs/FITS_DATASET.md) for the schema and quality gates.
 
 ## Development Gate
 
