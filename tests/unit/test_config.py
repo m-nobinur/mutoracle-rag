@@ -109,3 +109,31 @@ aggregation:
 
     with pytest.raises(ValidationError, match=r"delta_threshold"):
         load_config(config_path)
+
+
+def test_weighted_strategy_rejects_unknown_weight_keys(tmp_path: Path) -> None:
+    config_path = tmp_path / "invalid-weights.yaml"
+    config_path.write_text(
+        """
+aggregation:
+  strategy: weighted
+  weights:
+    nli: 0.4
+    semantic_similarity: 0.3
+    llm_jdge: 0.3
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValidationError, match=r"aggregation\.weights keys"):
+        load_config(config_path)
+
+
+def test_load_config_can_disable_environment_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_APP_TITLE", "Injected Title")
+
+    config = load_config(apply_environment=False)
+
+    assert config.openrouter.app_title == "MutOracle-RAG"

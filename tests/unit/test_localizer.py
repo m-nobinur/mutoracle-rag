@@ -71,6 +71,29 @@ class QueryOnlyPromptMutation:
         )
 
 
+@dataclass(frozen=True)
+class RandomScoreMutation:
+    operator_id: str
+    stage: Stage
+    name: str = "Random score mutation"
+
+    def apply(self, run: RAGRun, *, rng: Random) -> RAGRun:
+        mutated = clone_run(
+            run,
+            operator_id=self.operator_id,
+            operator_name=self.name,
+            stage=self.stage,
+        )
+        metadata = dict(mutated.metadata)
+        metadata["fixture_score"] = rng.random()
+        return RAGRun(
+            query=mutated.query,
+            passages=mutated.passages,
+            answer=mutated.answer,
+            metadata=metadata,
+        )
+
+
 class QueryDependentPipeline:
     def run(self, query: str) -> RAGRun:
         answer = "unsupported answer" if "not" in query.lower() else "supported answer"
@@ -159,6 +182,53 @@ def test_prompt_mutations_are_scored_from_rerun_pipeline_outputs() -> None:
 
     assert report.stage == "prompt"
     assert report.deltas["QN"] == pytest.approx(0.8)
+
+
+def test_explicit_empty_operator_mapping_is_respected() -> None:
+    localizer = FaultLocalizer(
+        pipeline=StaticPipeline(),
+        oracles=[MetadataOracle()],
+        aggregator=UniformAggregator(),
+        delta_threshold=0.05,
+        operators={},
+    )
+
+    report = localizer.diagnose("What is supported?")
+
+    assert report.deltas == {}
+    assert report.stage_deltas == {"retrieval": 0.0, "prompt": 0.0, "generation": 0.0}
+    assert report.stage == "no_fault_detected"
+
+
+def test_operator_order_does_not_change_randomized_mutation_scores() -> None:
+    forward = FaultLocalizer(
+        pipeline=StaticPipeline(),
+        oracles=[MetadataOracle()],
+        aggregator=UniformAggregator(),
+        delta_threshold=0.05,
+        operators={
+            "CI": RandomScoreMutation("CI", "retrieval"),
+            "QN": RandomScoreMutation("QN", "prompt"),
+        },
+        seed=2026,
+    )
+    reversed_order = FaultLocalizer(
+        pipeline=StaticPipeline(),
+        oracles=[MetadataOracle()],
+        aggregator=UniformAggregator(),
+        delta_threshold=0.05,
+        operators={
+            "QN": RandomScoreMutation("QN", "prompt"),
+            "CI": RandomScoreMutation("CI", "retrieval"),
+        },
+        seed=2026,
+    )
+
+    report_forward = forward.diagnose("What is supported?")
+    report_reversed = reversed_order.diagnose("What is supported?")
+
+    assert report_forward.deltas == report_reversed.deltas
+    assert report_forward.stage_deltas == report_reversed.stage_deltas
 
 
 def test_localizer_rejects_delta_threshold_outside_unit_interval() -> None:

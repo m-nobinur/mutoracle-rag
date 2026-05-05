@@ -40,3 +40,10 @@ def test_confidence_gated_aggregator_blocks_low_confidence_score_sets() -> None:
 def test_confidence_gated_rejects_impossible_gate_requirement() -> None:
     with pytest.raises(ValueError, match=r"cannot exceed"):
         ConfidenceGatedAggregator({"nli": 1.0}, min_passing_oracles=2)
+
+
+def test_confidence_gated_rejects_min_score_outside_unit_interval() -> None:
+    with pytest.raises(ValueError, match=r"min_score"):
+        ConfidenceGatedAggregator({"nli": 1.0}, min_score=-0.1)
+    with pytest.raises(ValueError, match=r"min_score"):
+        ConfidenceGatedAggregator({"nli": 1.0}, min_score=1.1)

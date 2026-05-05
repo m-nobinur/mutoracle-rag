@@ -188,6 +188,34 @@ def test_semantic_cache_reuses_scores_for_query_only_changes(tmp_path: Path) -> 
     assert backend.calls == 1
 
 
+def test_judge_cache_reuses_scores_for_query_only_changes(tmp_path: Path) -> None:
+    baseline = RAGRun(
+        query="What does MutOracle do?",
+        passages=["MutOracle localizes RAG failures."],
+        answer="MutOracle localizes RAG failures.",
+    )
+    query_mutation = RAGRun(
+        query="How does MutOracle work?",
+        passages=baseline.passages,
+        answer=baseline.answer,
+    )
+    config = MutOracleConfig(runtime=RuntimeConfig(cache_path=tmp_path / "cache.db"))
+    ledger = SQLiteCacheLedger(config.runtime.cache_path)
+    provider = SequenceJudgeProvider(
+        ['{"verdict": "faithful", "confidence": 0.7, "reason": "Supported."}']
+    )
+    oracle = LLMJudgeOracle(config=config, ledger=ledger, provider=provider)
+
+    first = oracle.score_result(baseline)
+    second = oracle.score_result(query_mutation)
+
+    assert first.value == pytest.approx(0.7)
+    assert second.value == pytest.approx(0.7)
+    assert first.metadata["cache_hit"] is False
+    assert second.metadata["cache_hit"] is True
+    assert provider.calls == 1
+
+
 def test_judge_json_parsing_is_strict() -> None:
     parsed = parse_judge_response(
         '{"verdict": "faithful", "confidence": 0.91, "reason": "Supported."}'
