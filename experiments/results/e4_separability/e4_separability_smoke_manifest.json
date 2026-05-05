@@ -8,8 +8,8 @@
   "experiment_id": "e4_separability",
   "failure_count": 0,
   "failures_jsonl": "experiments/results/e4_separability/e4_separability_smoke_failures.jsonl",
-  "git_commit": "72f6969db1e881ccad8f538903bdea901cad1c2a",
-  "latency_seconds": 0.008804,
+  "git_commit": "2236cee62f391fc036032cb66c010ea5312183c5",
+  "latency_seconds": 0.008573,
   "metadata": {
     "script": "experiments/run_ablation.py",
     "variant_names": [
@@ -33,7 +33,7 @@
   "query_limit": 5,
   "raw_jsonl": "experiments/results/e4_separability/e4_separability_smoke_raw.jsonl",
   "row_count": 60,
-  "run_id": "f9b24a50c63e984c",
+  "run_id": "4e58b1e2e8927a8a",
   "sdk_versions": {
     "mutoracle-rag": "0.1.0",
     "openai": "2.33.0",
@@ -56,5 +56,5 @@
     "prompt_tokens": 0,
     "total_tokens": 0
   },
-  "written_at": "2026-05-05T15:17:06.860198+00:00"
+  "written_at": "2026-05-05T16:25:04.479390+00:00"
 }

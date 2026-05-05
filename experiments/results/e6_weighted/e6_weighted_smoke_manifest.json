@@ -8,8 +8,8 @@
   "experiment_id": "e6_weighted",
   "failure_count": 0,
   "failures_jsonl": "experiments/results/e6_weighted/e6_weighted_smoke_failures.jsonl",
-  "git_commit": "72f6969db1e881ccad8f538903bdea901cad1c2a",
-  "latency_seconds": 37.635622,
+  "git_commit": "2236cee62f391fc036032cb66c010ea5312183c5",
+  "latency_seconds": 0.063218,
   "metadata": {
     "script": "experiments/run_ablation.py",
     "variant_names": [
@@ -32,7 +32,7 @@
   "query_limit": 5,
   "raw_jsonl": "experiments/results/e6_weighted/e6_weighted_smoke_raw.jsonl",
   "row_count": 45,
-  "run_id": "a767f500b10d4445",
+  "run_id": "19b3a7a12731b663",
   "sdk_versions": {
     "mutoracle-rag": "0.1.0",
     "openai": "2.33.0",
@@ -51,9 +51,9 @@
   "summary_csv": "experiments/results/e6_weighted/e6_weighted_smoke_summary.csv",
   "title": "E6 weighted aggregation comparison",
   "token_counts": {
-    "completion_tokens": 1498,
-    "prompt_tokens": 6136,
-    "total_tokens": 7634
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0
   },
-  "written_at": "2026-05-05T15:17:45.106200+00:00"
+  "written_at": "2026-05-05T16:25:05.082852+00:00"
 }

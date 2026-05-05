@@ -8,8 +8,8 @@
   "experiment_id": "e2_localization",
   "failure_count": 0,
   "failures_jsonl": "experiments/results/e2_localization/e2_localization_smoke_failures.jsonl",
-  "git_commit": "72f6969db1e881ccad8f538903bdea901cad1c2a",
-  "latency_seconds": 0.002844,
+  "git_commit": "2236cee62f391fc036032cb66c010ea5312183c5",
+  "latency_seconds": 0.002909,
   "metadata": {
     "purpose": "E2 localization and E4 mutation-delta separability records",
     "script": "experiments/run_mutoracle.py"
@@ -28,7 +28,7 @@
   "query_limit": 5,
   "raw_jsonl": "experiments/results/e2_localization/e2_localization_smoke_raw.jsonl",
   "row_count": 15,
-  "run_id": "13956c419c21b2a6",
+  "run_id": "054f8270426d221e",
   "sdk_versions": {
     "mutoracle-rag": "0.1.0",
     "openai": "2.33.0",
@@ -51,5 +51,5 @@
     "prompt_tokens": 0,
     "total_tokens": 0
   },
-  "written_at": "2026-05-05T15:17:06.152577+00:00"
+  "written_at": "2026-05-05T16:25:03.854612+00:00"
 }
