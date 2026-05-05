@@ -1,4 +1,4 @@
-.PHONY: install format lint type test check cli smoke mutate data
+.PHONY: install format lint type test check cli smoke mutate data baseline
 
 install:
 	uv sync --all-extras --dev
@@ -28,3 +28,6 @@ mutate:
 
 data:
 	uv run mutoracle data build
+
+baseline:
+	uv run python experiments/run_baselines.py --baseline metarag --queries 2

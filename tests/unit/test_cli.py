@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from typer.testing import CliRunner
 
 import mutoracle.cli as cli_module
@@ -84,3 +87,34 @@ def test_cli_diagnose_real_oracles_path(monkeypatch) -> None:
     assert result.exit_code == 0
     assert calls == ["real"]
     assert '"stage":' in result.output
+
+
+def test_cli_baseline_smoke_writes_jsonl_and_manifest(tmp_path: Path) -> None:
+    output_path = tmp_path / "baseline-smoke.jsonl"
+    result = CliRunner().invoke(
+        app,
+        [
+            "baseline",
+            "smoke",
+            "--baseline",
+            "metarag",
+            "--queries",
+            "2",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Phase 7 baselines" in result.output
+    assert output_path.exists()
+    manifest_path = output_path.with_suffix(".manifest.json")
+    assert manifest_path.exists()
+
+    rows = [
+        json.loads(line)
+        for line in output_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert rows
+    assert rows[0]["baseline_name"] == "metarag"
