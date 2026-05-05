@@ -209,6 +209,53 @@ def test_expected_stage_and_label_support_explicit_fields() -> None:
     assert expected_detection_label(record) == "faithful"
 
 
+def test_record_selection_balances_ordered_stage_splits(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "ordered.jsonl"
+    rows = []
+    for stage in ("retrieval", "prompt", "generation", "no_fault"):
+        for index in range(4):
+            rows.append(
+                {
+                    "qid": f"{stage}_{index}",
+                    "query": "q",
+                    "gt_answer": "a",
+                    "fault_stage": stage,
+                    "split": "test",
+                }
+            )
+    dataset_path.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    settings = ExperimentRunSettings(
+        experiment_id="balanced_selection",
+        title="Balanced selection",
+        mode="dev",
+        config_path=tmp_path / "config.yaml",
+        dataset_path=dataset_path,
+        split="test",
+        query_limit=8,
+        seeds=[13],
+        output_dir=tmp_path,
+        cost_cap_usd=0.5,
+        estimated_cost_per_example_usd=0.0,
+        require_smoke_before_full=True,
+    )
+
+    selected = selected_fits_records(settings)
+
+    assert [row["fault_stage"] for row in selected] == [
+        "retrieval",
+        "prompt",
+        "generation",
+        "no_fault",
+        "retrieval",
+        "prompt",
+        "generation",
+        "no_fault",
+    ]
+
+
 def test_rag_run_materialization_uses_staged_passages() -> None:
     record = {
         "qid": "rgbp8_000000",
