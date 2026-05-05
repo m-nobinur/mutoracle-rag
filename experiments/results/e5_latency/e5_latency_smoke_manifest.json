@@ -8,8 +8,8 @@
   "experiment_id": "e5_latency",
   "failure_count": 0,
   "failures_jsonl": "experiments/results/e5_latency/e5_latency_smoke_failures.jsonl",
-  "git_commit": "72f6969db1e881ccad8f538903bdea901cad1c2a",
-  "latency_seconds": 0.024333,
+  "git_commit": "2236cee62f391fc036032cb66c010ea5312183c5",
+  "latency_seconds": 0.024366,
   "metadata": {
     "script": "experiments/run_latency.py"
   },
@@ -29,7 +29,7 @@
   "query_limit": 5,
   "raw_jsonl": "experiments/results/e5_latency/e5_latency_smoke_raw.jsonl",
   "row_count": 30,
-  "run_id": "2e3c4cd202e68ead",
+  "run_id": "578e90f572289ae0",
   "sdk_versions": {
     "mutoracle-rag": "0.1.0",
     "openai": "2.33.0",
@@ -52,5 +52,5 @@
     "prompt_tokens": 0,
     "total_tokens": 0
   },
-  "written_at": "2026-05-05T15:17:07.184288+00:00"
+  "written_at": "2026-05-05T16:25:04.762136+00:00"
 }

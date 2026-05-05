@@ -8,8 +8,8 @@
   "experiment_id": "e1_detection",
   "failure_count": 0,
   "failures_jsonl": "experiments/results/e1_detection/e1_detection_smoke_failures.jsonl",
-  "git_commit": "72f6969db1e881ccad8f538903bdea901cad1c2a",
-  "latency_seconds": 76.996936,
+  "git_commit": "2236cee62f391fc036032cb66c010ea5312183c5",
+  "latency_seconds": 0.032624,
   "metadata": {
     "baseline_names": [
       "ragas",
@@ -28,6 +28,7 @@
     "fixture-rgb-generator",
     "fixture-ragas-judge",
     "fixture-lexical-nli",
+    "fixture-fits-generator",
     "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
     "sentence-transformers/all-mpnet-base-v2",
     "google/gemini-2.5-flash-lite"
@@ -40,7 +41,7 @@
   "query_limit": 5,
   "raw_jsonl": "experiments/results/e1_detection/e1_detection_smoke_raw.jsonl",
   "row_count": 45,
-  "run_id": "714a380c1ef0ca5c",
+  "run_id": "c56c78ce968e2336",
   "sdk_versions": {
     "mutoracle-rag": "0.1.0",
     "openai": "2.33.0",
@@ -59,9 +60,9 @@
   "summary_csv": "experiments/results/e1_detection/e1_detection_smoke_summary.csv",
   "title": "E1 response-level detection comparison",
   "token_counts": {
-    "completion_tokens": 3194,
-    "prompt_tokens": 14479,
-    "total_tokens": 17673
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0
   },
-  "written_at": "2026-05-05T15:17:05.721792+00:00"
+  "written_at": "2026-05-05T16:54:49.264081+00:00"
 }
