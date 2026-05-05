@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mutoracle.cache import SQLiteCacheLedger, completion_cache_key
+from mutoracle.cache import SQLiteCacheLedger, completion_cache_key, oracle_cache_key
 
 
 def test_sqlite_cache_and_usage_ledger(tmp_path: Path) -> None:
@@ -39,3 +39,27 @@ def test_sqlite_cache_and_usage_ledger(tmp_path: Path) -> None:
     assert summary.completion_tokens == 5
     assert summary.total_cost_usd == 0.25
     assert summary.total_latency_seconds == 0.5
+
+
+def test_sqlite_oracle_score_cache(tmp_path: Path) -> None:
+    ledger = SQLiteCacheLedger(tmp_path / "cache.sqlite3")
+    key = oracle_cache_key(
+        oracle_name="semantic_similarity",
+        model="test-model",
+        payload={"input_hash": "abc"},
+    )
+
+    assert ledger.lookup_oracle_score(key) is None
+
+    ledger.store_oracle_score(
+        cache_key=key,
+        oracle_name="semantic_similarity",
+        input_hash="abc",
+        score=0.75,
+        metadata={"raw_cosine": 0.5},
+    )
+    cached = ledger.lookup_oracle_score(key)
+
+    assert cached is not None
+    assert cached.score == 0.75
+    assert cached.metadata == {"raw_cosine": 0.5}

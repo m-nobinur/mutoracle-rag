@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from importlib import resources
 from pathlib import Path
+from random import Random
 from typing import Annotated, Any
 
 import typer
@@ -13,7 +14,15 @@ from rich.console import Console
 from rich.panel import Panel
 
 from mutoracle import __version__
+from mutoracle.aggregation import build_aggregator
+from mutoracle.cache import SQLiteCacheLedger
 from mutoracle.config import MutOracleConfig, load_config, resolve_config_path
+from mutoracle.contracts import RAGRun
+from mutoracle.localizer import FaultLocalizer, fault_report_to_dict
+from mutoracle.mutations import get_operator, list_operator_ids
+from mutoracle.mutations.base import content_similarity
+from mutoracle.oracles import LLMJudgeOracle, NLIOracle, SemanticSimilarityOracle
+from mutoracle.oracles.base import context_text
 from mutoracle.rag import FixtureRAGPipeline
 
 app = typer.Typer(
@@ -117,6 +126,119 @@ def smoke(
             queries=_default_smoke_queries(limit=queries),
             remote=False,
         )
+
+
+@app.command()
+def mutate(
+    operator: Annotated[
+        str,
+        typer.Option(
+            "--operator",
+            "-o",
+            help="Canonical mutation operator ID: CI, CR, CS, QP, QN, FS, or FA.",
+        ),
+    ],
+    query: Annotated[
+        str,
+        typer.Option("--query", "-q", help="Question to run before mutation."),
+    ] = "What is MutOracle-RAG?",
+    seed: Annotated[
+        int,
+        typer.Option("--seed", help="Deterministic mutation seed."),
+    ] = 2026,
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", exists=True, dir_okay=False),
+    ] = None,
+    corpus: Annotated[
+        Path | None,
+        typer.Option("--corpus", exists=True, dir_okay=False),
+    ] = None,
+) -> None:
+    """Run one canonical mutation against a fixture RAG run."""
+
+    try:
+        mutation_operator = get_operator(operator)
+    except ValueError as error:
+        console.print(f"[red]Mutation error:[/red] {error}")
+        raise typer.Exit(code=2) from error
+
+    resolved = _load_or_exit(config)
+    pipeline = FixtureRAGPipeline(config=resolved, corpus_path=corpus)
+    run = pipeline.run(query)
+    mutated = mutation_operator.apply(run, rng=Random(seed))
+    mutation = mutated.metadata["mutation"]
+    status = "rejected" if mutation["rejected"] else "applied"
+
+    console.print(
+        Panel.fit(
+            f"Operator: {operator.upper()} ({mutation_operator.name})\n"
+            f"Stage: {mutation_operator.stage}\n"
+            f"Status: {status}",
+            title="Mutation",
+        )
+    )
+    console.print_json(
+        data={
+            "operator": operator.upper(),
+            "valid_operators": list_operator_ids(),
+            "baseline": _run_summary(run),
+            "mutated": _run_summary(mutated),
+            "mutation": mutation,
+        }
+    )
+
+
+@app.command()
+def diagnose(
+    query: Annotated[
+        str,
+        typer.Option("--query", "-q", help="Question to diagnose."),
+    ] = "What is MutOracle-RAG?",
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", exists=True, dir_okay=False),
+    ] = None,
+    corpus: Annotated[
+        Path | None,
+        typer.Option("--corpus", exists=True, dir_okay=False),
+    ] = None,
+    real_oracles: Annotated[
+        bool,
+        typer.Option(
+            "--real-oracles",
+            help="Use configured model-backed oracles instead of fixture oracles.",
+        ),
+    ] = False,
+) -> None:
+    """Run mutation-delta fault localization for one fixture RAG query."""
+
+    resolved = _load_or_exit(config)
+    pipeline = FixtureRAGPipeline(config=resolved, corpus_path=corpus)
+    aggregator = build_aggregator(resolved.aggregation)
+    oracles = _real_oracles(resolved) if real_oracles else _fixture_oracles()
+    localizer = FaultLocalizer(
+        pipeline=pipeline,
+        oracles=oracles,
+        aggregator=aggregator,
+        delta_threshold=float(resolved.aggregation.delta_threshold),
+        seed=resolved.runtime.seed,
+    )
+    try:
+        report = localizer.diagnose(query)
+    except RuntimeError as error:
+        console.print(f"[red]Diagnose error:[/red] {error}")
+        raise typer.Exit(code=2) from error
+
+    console.print(
+        Panel.fit(
+            f"Question: {query}\n"
+            f"Stage: {report.stage}\n"
+            f"Confidence: {report.confidence:.4f}",
+            title="Fault diagnosis",
+        )
+    )
+    console.print_json(data=fault_report_to_dict(report))
 
 
 @rag_app.command("smoke")
@@ -235,6 +357,15 @@ def _default_smoke_queries(*, limit: int) -> list[str]:
     return selected[:limit]
 
 
+def _run_summary(run: RAGRun) -> dict[str, Any]:
+    return {
+        "query": run.query,
+        "passage_count": len(run.passages),
+        "passages": run.passages,
+        "answer": run.answer,
+    }
+
+
 def _load_or_exit(path: Path | None) -> MutOracleConfig:
     try:
         return load_config(path)
@@ -248,3 +379,39 @@ def _config_to_jsonable(config: MutOracleConfig) -> dict[str, Any]:
     if encoded["openrouter"].get("api_key"):
         encoded["openrouter"]["api_key"] = "***"
     return encoded
+
+
+class _FixtureOracle:
+    """Credential-free oracle used for deterministic localizer smoke runs."""
+
+    def __init__(self, name: str, *, query_weight: float = 0.0) -> None:
+        self.name = name
+        self._query_weight = query_weight
+
+    def score(self, run: RAGRun) -> float:
+        support = content_similarity(context_text(run), run.answer)
+        if self._query_weight == 0.0:
+            return support
+        query_alignment = content_similarity(run.query, run.answer)
+        return (
+            1.0 - self._query_weight
+        ) * support + self._query_weight * query_alignment
+
+
+def _fixture_oracles() -> list[_FixtureOracle]:
+    return [
+        _FixtureOracle("nli"),
+        _FixtureOracle("semantic_similarity"),
+        _FixtureOracle("llm_judge", query_weight=0.25),
+    ]
+
+
+def _real_oracles(
+    config: MutOracleConfig,
+) -> list[SemanticSimilarityOracle | NLIOracle | LLMJudgeOracle]:
+    ledger = SQLiteCacheLedger(config.runtime.cache_path)
+    return [
+        NLIOracle(config=config, ledger=ledger),
+        SemanticSimilarityOracle(config=config, ledger=ledger),
+        LLMJudgeOracle(config=config, ledger=ledger),
+    ]

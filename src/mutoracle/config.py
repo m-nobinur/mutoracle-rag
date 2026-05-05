@@ -4,13 +4,27 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, PositiveInt
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    NonNegativeFloat,
+    PositiveInt,
+    model_validator,
+)
+
+from mutoracle.aggregation.weighted import validate_weights
 
 DEFAULT_CONFIG_PATH = Path("experiments/configs/dev.yaml")
 PROJECT_ENV_PATH = Path(".env")
+EXPECTED_ORACLE_WEIGHT_KEYS = {
+    "nli",
+    "semantic_similarity",
+    "llm_judge",
+}
 
 
 class OpenRouterConfig(BaseModel):
@@ -55,6 +69,70 @@ class RAGConfig(BaseModel):
     top_k: PositiveInt = 3
 
 
+class OracleConfig(BaseModel):
+    """Local oracle model settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    semantic_model: str = "sentence-transformers/all-mpnet-base-v2"
+    nli_model: str = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"
+
+
+class AggregationConfig(BaseModel):
+    """Aggregation and fault-localization settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    strategy: Literal["uniform", "weighted", "confidence_gated"] = "weighted"
+    weights: dict[str, float] = Field(
+        default_factory=lambda: {
+            "nli": 0.4,
+            "semantic_similarity": 0.3,
+            "llm_judge": 0.3,
+        }
+    )
+    delta_threshold: NonNegativeFloat = 0.05
+    confidence_gate_min_score: NonNegativeFloat = 0.5
+    confidence_gate_min_oracles: PositiveInt = 2
+
+    @model_validator(mode="after")
+    def _validate_weights(self) -> AggregationConfig:
+        if self.strategy != "uniform":
+            keys = set(self.weights)
+            if keys != EXPECTED_ORACLE_WEIGHT_KEYS:
+                missing = sorted(EXPECTED_ORACLE_WEIGHT_KEYS - keys)
+                unexpected = sorted(keys - EXPECTED_ORACLE_WEIGHT_KEYS)
+                details: list[str] = []
+                if missing:
+                    details.append(f"missing={missing}")
+                if unexpected:
+                    details.append(f"unexpected={unexpected}")
+                detail_suffix = ", ".join(details)
+                msg = (
+                    "aggregation.weights keys must match "
+                    "['llm_judge', 'nli', 'semantic_similarity']; "
+                    f"{detail_suffix}."
+                )
+                raise ValueError(msg)
+            validate_weights(self.weights)
+
+        if self.strategy == "confidence_gated":
+            if self.confidence_gate_min_score > 1.0:
+                msg = "confidence_gate_min_score must be in [0, 1]."
+                raise ValueError(msg)
+            if self.confidence_gate_min_oracles > len(self.weights):
+                msg = (
+                    "confidence_gate_min_oracles cannot exceed the number of "
+                    "configured oracle weights."
+                )
+                raise ValueError(msg)
+
+        if self.delta_threshold > 1.0:
+            msg = "delta_threshold must be in [0, 1]."
+            raise ValueError(msg)
+        return self
+
+
 class RuntimeConfig(BaseModel):
     """Filesystem and reproducibility settings."""
 
@@ -74,15 +152,25 @@ class MutOracleConfig(BaseModel):
     cost: CostConfig = Field(default_factory=CostConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
     rag: RAGConfig = Field(default_factory=RAGConfig)
+    oracles: OracleConfig = Field(default_factory=OracleConfig)
+    aggregation: AggregationConfig = Field(default_factory=AggregationConfig)
+    calibration: dict[str, Any] = Field(default_factory=dict)
 
 
-def load_config(path: Path | None = None) -> MutOracleConfig:
+def load_config(
+    path: Path | None = None,
+    *,
+    apply_environment: bool = True,
+) -> MutOracleConfig:
     """Load config from YAML plus secret/environment overrides."""
 
-    _load_project_env()
+    if apply_environment:
+        _load_project_env()
     resolved_path = resolve_config_path(path)
     raw = _read_yaml(resolved_path) if resolved_path else {}
     config = MutOracleConfig.model_validate(raw)
+    if not apply_environment:
+        return config
     return _apply_environment(config, allow_runtime_overrides=resolved_path is None)
 
 

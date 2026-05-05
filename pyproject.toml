@@ -34,6 +34,11 @@ dev = [
   "ruff>=0.6.9",
   "types-pyyaml>=6.0.12",
 ]
+oracles = [
+  "sentence-transformers>=3.0",
+  "torch>=2.3",
+  "transformers>=4.44",
+]
 
 [project.urls]
 Homepage = "https://github.com/example/mutoracle-rag"
@@ -66,6 +71,13 @@ packages = ["mutoracle"]
 module = ["yaml"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["sentence_transformers", "transformers"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
-addopts = "--cov=mutoracle --cov-report=term-missing"
+addopts = "--cov=mutoracle --cov-report=term-missing -m 'not provider'"
 testpaths = ["tests"]
+markers = [
+  "provider: live provider tests that may call paid or remote model APIs",
+]
