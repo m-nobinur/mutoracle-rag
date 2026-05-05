@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from mutoracle.cli import app
+import mutoracle.cli as cli_module
+
+app = cli_module.app
 
 
 def test_cli_help() -> None:
@@ -36,3 +38,49 @@ def test_cli_ten_query_smoke() -> None:
     assert result.exit_code == 0
     assert "RAG batch smoke passed" in result.output
     assert '"queries": 10' in result.output
+
+
+def test_cli_mutate_ci() -> None:
+    result = CliRunner().invoke(app, ["mutate", "--operator", "CI"])
+
+    assert result.exit_code == 0
+    assert "Context Injection" in result.output
+    assert '"operator": "CI"' in result.output
+    assert '"rejected": false' in result.output
+
+
+def test_cli_diagnose_uses_fixture_oracles() -> None:
+    result = CliRunner().invoke(app, ["diagnose"])
+
+    assert result.exit_code == 0
+    assert "Fault diagnosis" in result.output
+    assert '"stage":' in result.output
+    assert '"deltas":' in result.output
+
+
+def test_cli_diagnose_real_oracles_path(monkeypatch) -> None:
+    calls: list[str] = []
+
+    class StubOracle:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def score(self, run) -> float:
+            del run
+            return 0.8
+
+    def fake_real_oracles(config):
+        del config
+        calls.append("real")
+        return [
+            StubOracle("nli"),
+            StubOracle("semantic_similarity"),
+            StubOracle("llm_judge"),
+        ]
+
+    monkeypatch.setattr(cli_module, "_real_oracles", fake_real_oracles)
+    result = CliRunner().invoke(app, ["diagnose", "--real-oracles"])
+
+    assert result.exit_code == 0
+    assert calls == ["real"]
+    assert '"stage":' in result.output

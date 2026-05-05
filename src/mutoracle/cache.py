@@ -20,6 +20,14 @@ class CachedCompletion:
 
 
 @dataclass(frozen=True)
+class CachedOracleScore:
+    """A cached normalized oracle score."""
+
+    score: float
+    metadata: dict[str, Any]
+
+
+@dataclass(frozen=True)
 class UsageSummary:
     """Aggregate usage recorded in the local ledger."""
 
@@ -74,6 +82,60 @@ class SQLiteCacheLedger:
                     metadata_json = excluded.metadata_json
                 """,
                 (cache_key, answer, json.dumps(metadata, sort_keys=True), time()),
+            )
+
+    def lookup_oracle_score(self, cache_key: str) -> CachedOracleScore | None:
+        """Return a cached oracle score for a key, if present."""
+
+        with self._connect() as connection:
+            row = connection.execute(
+                "select score, metadata_json from oracle_scores where cache_key = ?",
+                (cache_key,),
+            ).fetchone()
+        if row is None:
+            return None
+        return CachedOracleScore(
+            score=float(row["score"]),
+            metadata=json.loads(str(row["metadata_json"])),
+        )
+
+    def store_oracle_score(
+        self,
+        *,
+        cache_key: str,
+        oracle_name: str,
+        input_hash: str,
+        score: float,
+        metadata: dict[str, Any],
+    ) -> None:
+        """Store or replace a normalized oracle score."""
+
+        with self._connect() as connection:
+            connection.execute(
+                """
+                insert into oracle_scores(
+                    cache_key,
+                    oracle_name,
+                    input_hash,
+                    score,
+                    metadata_json,
+                    created_at
+                )
+                values (?, ?, ?, ?, ?, ?)
+                on conflict(cache_key) do update set
+                    oracle_name = excluded.oracle_name,
+                    input_hash = excluded.input_hash,
+                    score = excluded.score,
+                    metadata_json = excluded.metadata_json
+                """,
+                (
+                    cache_key,
+                    oracle_name,
+                    input_hash,
+                    score,
+                    json.dumps(metadata, sort_keys=True),
+                    time(),
+                ),
             )
 
     def record_usage(
@@ -173,6 +235,18 @@ class SQLiteCacheLedger:
                 )
                 """
             )
+            connection.execute(
+                """
+                create table if not exists oracle_scores (
+                    cache_key text primary key,
+                    oracle_name text not null,
+                    input_hash text not null,
+                    score real not null,
+                    metadata_json text not null,
+                    created_at real not null
+                )
+                """
+            )
             columns = {
                 str(row["name"])
                 for row in connection.execute("pragma table_info(usage_ledger)")
@@ -211,3 +285,22 @@ def completion_cache_key(
         sort_keys=True,
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def oracle_cache_key(
+    *,
+    oracle_name: str,
+    model: str,
+    payload: dict[str, Any],
+) -> str:
+    """Return a stable cache key for oracle inputs."""
+
+    encoded = json.dumps(
+        {
+            "model": model,
+            "oracle_name": oracle_name,
+            "payload": payload,
+        },
+        sort_keys=True,
+    )
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()

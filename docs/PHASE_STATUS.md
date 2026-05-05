@@ -85,11 +85,123 @@ Exit plan:
 - Live OpenRouter generation goes through the SQLite cache/cost ledger and is
   blocked when configured query or cost budgets are exhausted.
 
+## Phase 3: Mutation Engine
+
+Status: complete.
+
+Completed:
+
+- Added `src/mutoracle/mutations/` with base copy helpers, registry lookup, and
+  stage filtering.
+- Implemented all seven canonical operators: CI, CR, CS, QP, QN, FS, and FA.
+- Added deterministic rejection metadata for unsupported mutation cases.
+- Added `mutoracle mutate --operator CI` for fixture-run mutation smoke checks.
+- Added `make mutate` as the default mutation CLI wrapper.
+- Documented operator behavior and before/after examples in
+  `docs/MUTATION_TAXONOMY.md`.
+- Added unit tests for schema preservation, determinism, CR edge cases,
+  QP similarity rejection, QN grammar rejection, and FS/FA supported spans.
+
+Validation:
+
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src/mutoracle`
+- `uv run pytest`
+- `uv run mutoracle smoke --queries 10`
+- `uv run mutoracle mutate --operator CI`
+- `uv run mutoracle mutate --operator CR`
+- `uv run mutoracle mutate --operator CS`
+- `uv run mutoracle mutate --operator QP`
+- `uv run mutoracle mutate --operator QN`
+- `uv run mutoracle mutate --operator FS`
+- `uv run mutoracle mutate --operator FA`
+
+Exit plan:
+
+- Each canonical operator can run independently against fixture `RAGRun`
+  objects and emit stable mutation metadata for downstream oracle scoring.
+
+## Phase 4: Oracle Layer
+
+Status: complete.
+
+Completed:
+
+- Added `src/mutoracle/oracles/` with base score helpers, detailed score
+  metadata, and cache-backed oracle behavior.
+- Implemented semantic similarity scoring with injectable or lazy-loaded
+  `sentence-transformers` embeddings.
+- Implemented NLI scoring with injectable or lazy-loaded Hugging Face
+  `transformers` entailment probabilities.
+- Implemented OpenRouter-backed LLM judge scoring with the configured judge
+  model, locked prompt hash, strict Pydantic JSON validation, one retry, and
+  structured invalid-response failure metadata.
+- Extended the shared SQLite ledger with an `oracle_scores` table while keeping
+  provider completions and usage/cost ledger behavior intact.
+- Added optional `oracles` dependencies and config fields for local oracle model
+  names.
+- Added default pytest marker filtering so live provider tests are skipped unless
+  explicitly selected.
+- Documented score meaning, cache semantics, schema, and limitations in
+  `docs/ORACLE_LAYER.md`.
+
+Validation:
+
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src/mutoracle`
+- `uv run pytest tests/unit/test_oracles.py tests/unit/test_cache.py tests/unit/test_provider.py tests/unit/test_phase_layout.py`
+- `uv run pytest`
+
+Exit plan:
+
+- NLI, semantic similarity, and LLM judge oracles can score fixture `RAGRun`
+  objects through normalized `[0, 1]` interfaces.
+- Cached reruns avoid repeated injected model/provider calls.
+- Invalid judge JSON retries once and then records a structured failure without
+  blocking downstream aggregation.
+
+## Phase 5: Aggregation and Localizer
+
+Status: complete.
+
+Completed:
+
+- Added `src/mutoracle/aggregation/` with uniform, weighted, and
+  confidence-gated aggregation strategies.
+- Added config-backed aggregation weights, confidence gates, and
+  `delta_threshold` validation.
+- Added `src/mutoracle/localizer/` with transparent per-operator delta
+  computation, per-stage max deltas, thresholded stage attribution, confidence,
+  and evidence records.
+- Added `mutoracle diagnose`, defaulting to credential-free fixture oracles and
+  supporting `--real-oracles` for configured model-backed scoring.
+- Added deterministic calibration script at `experiments/run_weight_search.py`.
+- Added generated calibrated config at `experiments/configs/calibrated.yaml`.
+- Documented the decision rule, config fields, CLI, and report schema in
+  `docs/FAULT_LOCALIZER.md`.
+
+Validation:
+
+- `uv run python experiments/run_weight_search.py --seed 2026 --output experiments/configs/calibrated.yaml`
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src/mutoracle`
+- `uv run pytest tests/unit/test_aggregation.py tests/unit/test_localizer.py tests/unit/test_calibration.py tests/unit/test_cli.py tests/unit/test_config.py tests/unit/test_phase_layout.py`
+- `uv run mutoracle diagnose`
+
+Exit plan:
+
+- Fixture examples produce stable `FaultReport` records with stage, confidence,
+  per-operator deltas, stage deltas, and evidence.
+- Aggregation weights and localizer thresholds are loaded from YAML config.
+- The package is ready for Phase 6 FITS construction and validation splits.
+
 ## Next Phase
 
-Phase 3 should implement the mutation engine:
+Phase 6 should implement data and FITS:
 
-- seven operators: CI, CR, CS, QP, QN, FS, FA;
-- registry by operator ID and stage;
-- deterministic before/after examples for fixture `RAGRun` objects;
-- unit tests proving each operator preserves the public schema.
+- RGB and TriviaQA download/build scripts;
+- Wikipedia/noise corpus subset;
+- frozen FITS v1.0.0 split with manifest, checksums, licenses, and quality gates.

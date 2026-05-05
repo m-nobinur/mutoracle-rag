@@ -11,6 +11,20 @@ models:
 rag:
   top_k: 3
 
+oracles:
+  semantic_model: sentence-transformers/all-mpnet-base-v2
+  nli_model: MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli
+
+aggregation:
+  strategy: weighted
+  weights:
+    nli: 0.4
+    semantic_similarity: 0.3
+    llm_judge: 0.3
+  delta_threshold: 0.05
+  confidence_gate_min_score: 0.5
+  confidence_gate_min_oracles: 2
+
 cost:
   max_cost_usd: 1.0
   max_queries: 5
