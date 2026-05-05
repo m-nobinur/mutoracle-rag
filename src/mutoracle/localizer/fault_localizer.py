@@ -50,7 +50,11 @@ class FaultLocalizer:
             msg = "FaultLocalizer requires at least one oracle."
             raise ValueError(msg)
         self._aggregator = aggregator
-        self._delta_threshold = clamp_score(float(delta_threshold))
+        delta_threshold = float(delta_threshold)
+        if delta_threshold < 0.0 or delta_threshold > 1.0:
+            msg = "delta_threshold must be in [0, 1]."
+            raise ValueError(msg)
+        self._delta_threshold = delta_threshold
         self._operators = dict(operators or mutation_registry())
         self._seed = seed
 
@@ -77,7 +81,18 @@ class FaultLocalizer:
                 evidence.append(f"{operator_id} skipped: {reason}.")
                 continue
 
-            mutated_scores = score_run(mutated, self._oracles)
+            scored_run = _materialize_scored_run(
+                pipeline=self._pipeline,
+                baseline=baseline,
+                mutated=mutated,
+                operator=operator,
+            )
+            if scored_run is not mutated:
+                evidence.append(
+                    f"{operator_id} reran pipeline with mutated query for scoring."
+                )
+
+            mutated_scores = score_run(scored_run, self._oracles)
             mutated_omega = self._aggregator.combine(mutated_scores)
             delta = baseline_omega - mutated_omega
             deltas[operator_id] = delta
@@ -165,3 +180,31 @@ def fault_report_to_dict(report: FaultReport) -> dict[str, Any]:
     """Return a JSON-friendly fault report dictionary."""
 
     return asdict(report)
+
+
+def _materialize_scored_run(
+    *,
+    pipeline: RAGPipeline,
+    baseline: RAGRun,
+    mutated: RAGRun,
+    operator: MutationOperator,
+) -> RAGRun:
+    """Return the run representation that should be scored for one mutation."""
+
+    if operator.stage != "prompt" or mutated.query == baseline.query:
+        return mutated
+
+    rerun = pipeline.run(mutated.query)
+    mutation_record = mutated.metadata.get("mutation")
+    mutation_history = mutated.metadata.get("mutations")
+    metadata = dict(rerun.metadata)
+    if mutation_record is not None:
+        metadata["mutation"] = mutation_record
+    if isinstance(mutation_history, list):
+        metadata["mutations"] = mutation_history
+    return RAGRun(
+        query=rerun.query,
+        passages=rerun.passages,
+        answer=rerun.answer,
+        metadata=metadata,
+    )

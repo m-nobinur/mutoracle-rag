@@ -138,6 +138,56 @@ def test_nli_oracle_scores_tiny_fixture_and_uses_cache(tmp_path: Path) -> None:
     assert backend.calls == 1
 
 
+def test_nli_cache_reuses_scores_for_query_only_changes(tmp_path: Path) -> None:
+    baseline = RAGRun(
+        query="What does MutOracle do?",
+        passages=["MutOracle localizes RAG failures."],
+        answer="MutOracle localizes RAG failures.",
+    )
+    query_mutation = RAGRun(
+        query="How does MutOracle work?",
+        passages=baseline.passages,
+        answer=baseline.answer,
+    )
+    ledger = SQLiteCacheLedger(tmp_path / "cache.sqlite3")
+    backend = CountingNLIBackend()
+    oracle = NLIOracle(ledger=ledger, backend=backend, model_name="fake-nli")
+
+    first = oracle.score_result(baseline)
+    second = oracle.score_result(query_mutation)
+
+    assert first.metadata["cache_hit"] is False
+    assert second.metadata["cache_hit"] is True
+    assert backend.calls == 1
+
+
+def test_semantic_cache_reuses_scores_for_query_only_changes(tmp_path: Path) -> None:
+    baseline = RAGRun(
+        query="What does MutOracle do?",
+        passages=["MutOracle localizes RAG failures."],
+        answer="MutOracle localizes RAG failures.",
+    )
+    query_mutation = RAGRun(
+        query="How does MutOracle work?",
+        passages=baseline.passages,
+        answer=baseline.answer,
+    )
+    ledger = SQLiteCacheLedger(tmp_path / "cache.sqlite3")
+    backend = CountingEmbeddingBackend()
+    oracle = SemanticSimilarityOracle(
+        ledger=ledger,
+        backend=backend,
+        model_name="fake-embedding",
+    )
+
+    first = oracle.score_result(baseline)
+    second = oracle.score_result(query_mutation)
+
+    assert first.metadata["cache_hit"] is False
+    assert second.metadata["cache_hit"] is True
+    assert backend.calls == 1
+
+
 def test_judge_json_parsing_is_strict() -> None:
     parsed = parse_judge_response(
         '{"verdict": "faithful", "confidence": 0.91, "reason": "Supported."}'
