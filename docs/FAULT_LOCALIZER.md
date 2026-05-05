@@ -43,10 +43,12 @@ For each query, the localizer:
 1. Runs the baseline RAG pipeline.
 2. Scores the baseline with the configured oracle set.
 3. Applies each canonical mutation operator.
-4. Scores each mutated run.
-5. Computes `Delta_i = Omega_0 - Omega_i`.
-6. Computes each stage delta as the maximum operator delta for that stage.
-7. Predicts the stage with the largest stage delta unless it is at or below the
+4. For prompt-stage query mutations, reruns the pipeline with the mutated query
+  and scores that rerun output.
+5. Scores each non-rerun mutated run directly.
+6. Computes `Delta_i = Omega_0 - Omega_i`.
+7. Computes each stage delta as the maximum operator delta for that stage.
+8. Predicts the stage with the largest stage delta unless it is at or below the
    configured `delta_threshold`.
 
 The report schema is the public `FaultReport` contract:
