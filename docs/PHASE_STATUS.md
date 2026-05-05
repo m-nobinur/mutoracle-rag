@@ -241,10 +241,58 @@ Exit plan:
 - FITS v1.0.0 is frozen locally with manifest, dataset card, quality-gate
   report, checksums, source provenance, and deterministic rebuild controls.
 
+## Phase 7: Baselines
+
+Status: complete.
+
+Completed:
+
+- Added `src/mutoracle/baselines/` with shared baseline result schemas,
+  stable `RAGRun`-based run IDs, JSONL result writing, and sidecar manifests.
+- Added an official RAGAS adapter for the `Faithfulness` metric on shared
+  `RAGRun` objects plus answer relevancy, context precision, and context recall,
+  with RAGAS imported lazily so non-baseline workflows remain credential-free.
+- Added a documented MetaRAG approximation using spaCy-or-fallback claim
+  extraction, synonym/antonym/factoid variants, and NLI-style claim
+  verification.
+- Added validation-only threshold tuning that rejects non-validation split
+  records.
+- Added shared generation/evaluator model ID merging and latency/cost breakdown
+  metadata for directly comparable baseline records.
+- Added `mutoracle baseline smoke`, `experiments/run_baselines.py`, and
+  `make baseline` for tiny shared-output baseline result files.
+- Documented MetaRAG implementation deviations in
+  `docs/METARAG_REIMPLEMENTATION.md`.
+- Added unit tests for RAGAS input compatibility, MetaRAG empty-claim handling,
+  validation-only calibration, result schema fields, and baseline smoke output
+  artifacts.
+
+Validation:
+
+- `uv run ruff format .`
+- `uv run ruff check .`
+- `uv run mypy src/mutoracle`
+- `uv run pytest tests/unit/test_baselines.py tests/unit/test_phase_layout.py tests/unit/test_cli.py`
+- `uv run python experiments/run_baselines.py --baseline metarag --queries 2 --output /private/tmp/mutoracle-baselines-script.jsonl`
+- `make baseline`
+- `uv run pytest`
+
+Exit plan:
+
+- RAGAS and MetaRAG share comparable response-level result records over the same
+  `RAGRun` outputs.
+- Baseline results include latency, cost, model IDs, run IDs, thresholds, and
+  score metadata for Phase 8 experiment scripts.
+- The planned `experiments/run_baselines.py` entry point exists for Phase 8.
+- Thresholds are selected from validation records only.
+
 ## Next Phase
 
-Phase 7 should implement baselines:
+Phase 8 should implement the planned experiments:
 
-- official RAGAS harness on shared RAG outputs;
-- documented MetaRAG reimplementation;
-- baseline configs, thresholds, and result manifests for later experiments.
+- E1 response-level detection comparison against RAGAS and MetaRAG;
+- E2 FITS fault-attribution accuracy;
+- E3 oracle ablations;
+- E4 mutation/operator separability analysis;
+- E5 cost and latency reporting;
+- E6 weighted aggregation comparison.

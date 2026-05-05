@@ -8,7 +8,7 @@ localization in RAG pipelines. The committed design lock is in
 
 ## Current Status
 
-Phases 1 through 6 are in place:
+Phases 1 through 7 are in place:
 
 - repository bootstrap, typed contracts, config loading, CLI, and quality gates
 - reproducible fixture RAG system under test with OpenRouter generator support
@@ -17,6 +17,7 @@ Phases 1 through 6 are in place:
 - uniform, weighted, and confidence-gated aggregation strategies
 - mutation-delta fault localization with calibrated `FaultReport` output
 - deterministic Phase 6 data manifests and FITS v1.0.0 build/validation path
+- Phase 7 RAGAS and MetaRAG baseline harnesses with shared result schemas
 - shared SQLite response cache, oracle-score cache, cost ledger, and metadata
 - credential-free `smoke`, `mutate`, `diagnose`, and `data build` CLI paths
 
@@ -31,6 +32,7 @@ uv run mutoracle rag smoke
 uv run mutoracle mutate --operator CI
 uv run mutoracle diagnose
 uv run mutoracle data build
+uv run mutoracle baseline smoke --help
 uv run pytest
 ```
 
@@ -70,6 +72,27 @@ uv run python experiments/run_weight_search.py --seed 2026
 
 See [`docs/FAULT_LOCALIZER.md`](docs/FAULT_LOCALIZER.md) for the localizer
 decision rule and report schema.
+
+## Baselines
+
+Phase 7 adds response-level baseline comparison outputs for RAGAS and the local
+MetaRAG approximation. The RAGAS adapter records faithfulness, answer relevancy,
+context precision, and context recall when the official package is installed.
+The shared runner writes JSONL records with stable `run_id`, normalized score,
+threshold, predicted label, latency, cost, model IDs, and per-metric details.
+Rows also include metadata breakdowns that separate generation overhead from
+baseline evaluator overhead for Phase 8 analysis.
+
+```bash
+uv run mutoracle baseline smoke --baseline metarag --queries 2
+uv run python experiments/run_baselines.py --baseline metarag --queries 2
+make baseline
+```
+
+RAGAS is loaded through the official package adapter when it is installed and an
+evaluator model is configured. See
+[`docs/METARAG_REIMPLEMENTATION.md`](docs/METARAG_REIMPLEMENTATION.md) for the
+MetaRAG deviations and threshold-calibration rule.
 
 ## Data and FITS
 
