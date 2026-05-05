@@ -94,7 +94,6 @@ def oracle_payload(run: RAGRun) -> dict[str, Any]:
     return {
         "answer": run.answer,
         "passages": run.passages,
-        "query": run.query,
     }
 
 

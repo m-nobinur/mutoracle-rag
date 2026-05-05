@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from mutoracle.config import MutOracleConfig, load_config, resolve_config_path
 
@@ -73,3 +74,66 @@ def test_rag_and_provider_defaults_are_present() -> None:
     assert config.rag.top_k == 3
     assert config.openrouter.base_url.endswith("/api/v1")
     assert config.cost.prompt_cost_per_1m_tokens == 0.0
+
+
+def test_uniform_strategy_ignores_unused_invalid_weights(tmp_path: Path) -> None:
+    config_path = tmp_path / "uniform.yaml"
+    config_path.write_text(
+        """
+aggregation:
+  strategy: uniform
+  weights:
+    nli: 2.0
+    semantic_similarity: 0.0
+    llm_judge: 0.0
+""",
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.aggregation.strategy == "uniform"
+    assert config.aggregation.weights["nli"] == 2.0
+
+
+def test_delta_threshold_above_one_is_rejected(tmp_path: Path) -> None:
+    config_path = tmp_path / "invalid-threshold.yaml"
+    config_path.write_text(
+        """
+aggregation:
+  strategy: weighted
+  delta_threshold: 2.0
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValidationError, match=r"delta_threshold"):
+        load_config(config_path)
+
+
+def test_weighted_strategy_rejects_unknown_weight_keys(tmp_path: Path) -> None:
+    config_path = tmp_path / "invalid-weights.yaml"
+    config_path.write_text(
+        """
+aggregation:
+  strategy: weighted
+  weights:
+    nli: 0.4
+    semantic_similarity: 0.3
+    llm_jdge: 0.3
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValidationError, match=r"aggregation\.weights keys"):
+        load_config(config_path)
+
+
+def test_load_config_can_disable_environment_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENROUTER_APP_TITLE", "Injected Title")
+
+    config = load_config(apply_environment=False)
+
+    assert config.openrouter.app_title == "MutOracle-RAG"

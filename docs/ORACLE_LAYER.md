@@ -15,9 +15,11 @@ cosine, label probabilities, judge verdict, retry count, or cache status.
 
 ## Cache Contract
 
-Oracle inputs are keyed by stable hashes of query, passages, and answer. Scores
-are stored in the shared SQLite ledger through `oracle_scores`, separate from
-provider completion cache rows.
+Oracle score inputs are keyed by stable hashes of passages and answer. Query is
+intentionally excluded so query-only mutations can reuse faithfulness scores
+when retrieval context and generated answer are unchanged. Scores are stored in
+the shared SQLite ledger through `oracle_scores`, separate from provider
+completion cache rows.
 
 The LLM judge has two cache layers:
 
