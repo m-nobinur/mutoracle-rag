@@ -1,0 +1,78 @@
+{
+  "artifact": "fits_v1.0.0",
+  "build_seed": 2026,
+  "code_commit": "77bad2cebc74fa912ecaf18d0053f4e780fccfb3",
+  "created_at": "2026-05-05T00:00:00+00:00",
+  "files": {
+    "audit_sample_jsonl": {
+      "checksum": "sha256:dfe7350fc0c62b85e166cddfceb1a4e7825bfb6b625b33254c0f61982b9378b6",
+      "path": "data/fits/fits_v1.0.0/audit_sample.jsonl"
+    },
+    "fits_jsonl": {
+      "checksum": "sha256:0622b4cd2c57cc64887b71f2fedb141b36a0da5942a619b13c5ac39158f119e0",
+      "path": "data/fits/fits_v1.0.0/fits.jsonl"
+    },
+    "test_jsonl": {
+      "checksum": "sha256:78e34bc5ff6d04fadc4d1f29fb50619dd063ce4f41f0dd60e416343fde4dba22",
+      "path": "data/fits/fits_v1.0.0/test.jsonl"
+    },
+    "validation_jsonl": {
+      "checksum": "sha256:21a9ee5270c62dea6ac23105774b30813491c39bc97dd829cda51f415367d72d",
+      "path": "data/fits/fits_v1.0.0/validation.jsonl"
+    }
+  },
+  "quality_gates": {
+    "audit_label_correctness": 1.0,
+    "audit_sample_size": 50,
+    "deterministic_checksum": "sha256:0622b4cd2c57cc64887b71f2fedb141b36a0da5942a619b13c5ac39158f119e0",
+    "fits_query_length_mean": 10.45,
+    "labels": {
+      "generation": 75,
+      "no_fault": 75,
+      "prompt": 75,
+      "retrieval": 75
+    },
+    "passed": true,
+    "qid_overlap_count": 0,
+    "query_length_within_tolerance": true,
+    "source_query_length_mean": 10.2,
+    "splits": {
+      "test": 240,
+      "validation": 60
+    },
+    "stratification_within_tolerance": true,
+    "total_examples": 300
+  },
+  "source_revisions": [
+    {
+      "checksum": "sha256:1ddc48de22247a7396a9b3e6e293b22643afbca81978a6711183d212750089c5",
+      "dataset_id": "rgb",
+      "date": "2026-05-05",
+      "license": "source license; verify upstream before redistribution",
+      "name": "RGB Benchmark",
+      "notes": "Primary RAG evaluation source. The offline build uses a schema-compatible fixture preview until raw downloads are staged.",
+      "revision": "phase6-fixture-preview",
+      "url": "https://github.com/chen700564/RGB"
+    },
+    {
+      "checksum": "sha256:0dbd83c31f85869bc7de2b6c6de2aac9912dfd0270fb429d0bb02e77cc32a828",
+      "dataset_id": "triviaqa",
+      "date": "2026-05-05",
+      "license": "Apache-2.0",
+      "name": "TriviaQA filtered subset",
+      "notes": "Generalization and FITS source. The Phase 6 loader keeps a local deterministic subset for offline reproducibility.",
+      "revision": "phase6-fixture-preview",
+      "url": "https://huggingface.co/datasets/mandarjoshi/trivia_qa"
+    },
+    {
+      "checksum": "sha256:d55c217973accabb37d17c254505519387af752970a44d7a5f29541358a8d5d1",
+      "dataset_id": "wikipedia_noise",
+      "date": "2026-05-05",
+      "license": "CC BY-SA 3.0",
+      "name": "Wikipedia/noise passage pool",
+      "notes": "Distractor pool used for CI and FITS generation faults.",
+      "revision": "phase6-fixture-preview",
+      "url": "https://huggingface.co/datasets/wikimedia/wikipedia"
+    }
+  ]
+}
