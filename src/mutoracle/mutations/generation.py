@@ -40,6 +40,20 @@ ANTONYM_REPLACEMENTS = {
     "supported": "unsupported",
 }
 
+ENTITY_REPLACEMENTS = {
+    "Apollo": "Gemini",
+    "Elon Musk": "Jeff Bezos",
+    "Guido van Rossum": "Dennis Ritchie",
+    "Marie Curie": "Rosalind Franklin",
+    "Python": "Java",
+    "Transformer architecture": "recurrent neural network",
+    "computer program": "database schema",
+    "efficient similarity search": "relational indexing",
+    "embedded": "serialized",
+    "relational database": "document store",
+    "retrieved context": "training data",
+}
+
 
 @dataclass(frozen=True)
 class FactoidSynonymSubstitutionMutation:
@@ -81,6 +95,69 @@ class FactoidAntonymSubstitutionMutation:
         )
 
 
+@dataclass(frozen=True)
+class FactoidEntitySwapMutation:
+    """Swap a supported named entity or domain phrase for a nearby distractor."""
+
+    name: str = "Factoid Entity Swap"
+    stage: Stage = "generation"
+    operator_id: str = "FE"
+
+    def apply(self, run: RAGRun, *, rng: Random) -> RAGRun:
+        return _replace_supported_span(
+            run,
+            rng=rng,
+            operator_id=self.operator_id,
+            operator_name=self.name,
+            stage=self.stage,
+            replacements=ENTITY_REPLACEMENTS,
+            rejection_reason="no supported entity or domain phrase found in answer",
+        )
+
+
+@dataclass(frozen=True)
+class AnswerNegationMutation:
+    """Add a local negation to short factoid answers."""
+
+    name: str = "Answer Negation"
+    stage: Stage = "generation"
+    operator_id: str = "GN"
+
+    def apply(self, run: RAGRun, *, rng: Random) -> RAGRun:
+        del rng
+        answer = run.answer.strip()
+        if not answer or answer.lower().startswith(("not ", "no ")):
+            return clone_run(
+                run,
+                operator_id=self.operator_id,
+                operator_name=self.name,
+                stage=self.stage,
+                rejected=True,
+                rejection_reason="answer is empty or already negated",
+            )
+        auxiliary_pattern = (
+            r"\b(is|are|was|were|has|have|had|can|should|would|will)\b"
+        )
+        if re.search(auxiliary_pattern, answer):
+            candidate = re.sub(
+                auxiliary_pattern,
+                lambda match: f"{match.group(1)} not",
+                answer,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+        else:
+            candidate = f"Not {answer}"
+        return clone_run(
+            run,
+            answer=candidate,
+            operator_id=self.operator_id,
+            operator_name=self.name,
+            stage=self.stage,
+            details={"original_answer": run.answer},
+        )
+
+
 def _replace_supported_span(
     run: RAGRun,
     *,
@@ -103,9 +180,10 @@ def _replace_supported_span(
         )
 
     match = matches[rng.randrange(len(matches))]
+    replacement_map = {key.lower(): value for key, value in replacements.items()}
     replacement = preserve_capitalization(
         match.group(0),
-        replacements[match.group(0).lower()],
+        replacement_map[match.group(0).lower()],
     )
     answer = f"{run.answer[: match.start()]}{replacement}{run.answer[match.end() :]}"
     return clone_run(

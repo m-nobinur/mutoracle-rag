@@ -175,6 +175,7 @@ def main() -> None:
                             "confidence": round(report.confidence, 6),
                             "operator_deltas": payload["deltas"],
                             "stage_deltas": payload["stage_deltas"],
+                            "operator_status": payload["operator_status"],
                             "model_ids": model_ids,
                             "provider_route": provider_route,
                             "prompt_tokens": int(usage["prompt_tokens"]),
