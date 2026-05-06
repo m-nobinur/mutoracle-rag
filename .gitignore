@@ -9,6 +9,7 @@
 __pycache__/
 *.py[cod]
 htmlcov/
+.local/
 dev-plan-source/
 dist/
 build/
@@ -21,7 +22,7 @@ data/fits/fits_v*/*.jsonl
 results/**/*.jsonl
 results/**/*.parquet
 results/**/*.duckdb
-paper/*.duckdb
+paper/
 experiments/results/**/*_dev_*
 experiments/results/**/*.jsonl
 experiments/results/**/*.manifest.json
