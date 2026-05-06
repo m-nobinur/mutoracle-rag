@@ -11,6 +11,10 @@ smoke:
   query_limit: 5
   seeds: [13, 42, 91]
 
+dev:
+  query_limit: 20
+  seeds: [13]
+
 full:
   query_limit: 240
   seeds: [13, 42, 91]

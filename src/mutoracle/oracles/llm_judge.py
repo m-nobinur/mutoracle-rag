@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -75,6 +76,16 @@ class LLMJudgeOracle:
         return self.score_result(run).value
 
     def score_result(self, run: RAGRun) -> OracleScore:
+        """Return judge faithfulness score and validation metadata."""
+
+        return self.score_results([run])[0]
+
+    def score_results(self, runs: Sequence[RAGRun]) -> list[OracleScore]:
+        """Return judge faithfulness scores for a batch of runs."""
+
+        return [self._score_result_one(run) for run in runs]
+
+    def _score_result_one(self, run: RAGRun) -> OracleScore:
         """Return judge faithfulness score and validation metadata."""
 
         payload = oracle_payload(run)

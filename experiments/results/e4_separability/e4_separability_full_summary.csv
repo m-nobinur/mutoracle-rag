@@ -1,0 +1,10 @@
+ablation_name,accuracy,correct,examples,experiment_id,seed
+all_operators,0.3,216,720,e4_separability,
+drop_generation_operators,0.25,180,720,e4_separability,
+drop_prompt_operators,0.3,216,720,e4_separability,
+drop_retrieval_operators,0.25,180,720,e4_separability,
+all,0.275,792,2880,e4_separability,
+,0.275,264,960,e4_separability,13
+,0.275,264,960,e4_separability,42
+,0.275,264,960,e4_separability,91
+,0.275,792,2880,e4_separability,all

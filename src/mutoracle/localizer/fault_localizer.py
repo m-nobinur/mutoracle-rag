@@ -17,6 +17,7 @@ from mutoracle.contracts import (
     RAGRun,
     Stage,
 )
+from mutoracle.localizer.calibration import DeltaVectorCalibrator
 from mutoracle.mutations import mutation_registry
 from mutoracle.oracles import clamp_score
 
@@ -44,6 +45,8 @@ class FaultLocalizer:
         delta_threshold: float,
         operators: Mapping[str, MutationOperator] | None = None,
         seed: int = 2026,
+        stage_thresholds: Mapping[Stage, float] | None = None,
+        calibrator: DeltaVectorCalibrator | None = None,
     ) -> None:
         self._pipeline = pipeline
         self._oracles = list(oracles)
@@ -58,17 +61,19 @@ class FaultLocalizer:
         self._delta_threshold = delta_threshold
         self._operators = dict(mutation_registry() if operators is None else operators)
         self._seed = seed
+        self._stage_thresholds = (
+            None if stage_thresholds is None else dict(stage_thresholds)
+        )
+        self._calibrator = calibrator
 
     def diagnose(self, query: str) -> FaultReport:
         """Return a stage-level fault report for one query."""
 
         baseline = self._pipeline.run(query)
-        baseline_scores = score_run(baseline, self._oracles)
-        baseline_omega = self._aggregator.combine(baseline_scores)
-
-        deltas: dict[str, float] = {}
+        scorable_runs = [baseline]
+        operator_runs: list[tuple[str, MutationOperator, RAGRun | None, bool]] = []
+        operator_status: dict[str, dict[str, Any]] = {}
         evidence = [
-            f"Baseline composite score: {baseline_omega:.4f}.",
             f"Delta threshold: {self._delta_threshold:.4f}.",
         ]
 
@@ -77,9 +82,15 @@ class FaultLocalizer:
             mutated = operator.apply(baseline, rng=rng)
             mutation = mutated.metadata.get("mutation", {})
             if isinstance(mutation, dict) and mutation.get("rejected") is True:
-                deltas[operator_id] = 0.0
                 reason = mutation.get("rejection_reason", "mutation rejected")
                 evidence.append(f"{operator_id} skipped: {reason}.")
+                operator_status[operator_id] = {
+                    "stage": operator.stage,
+                    "applied": False,
+                    "rejected": True,
+                    "reason": str(reason),
+                }
+                operator_runs.append((operator_id, operator, None, False))
                 continue
 
             scored_run = _materialize_scored_run(
@@ -92,8 +103,30 @@ class FaultLocalizer:
                 evidence.append(
                     f"{operator_id} reran pipeline with mutated query for scoring."
                 )
+            scorable_runs.append(scored_run)
+            operator_status[operator_id] = {
+                "stage": operator.stage,
+                "applied": True,
+                "rejected": False,
+            }
+            operator_runs.append((operator_id, operator, scored_run, True))
 
-            mutated_scores = score_run(scored_run, self._oracles)
+        all_scores = score_runs(scorable_runs, self._oracles)
+        baseline_scores = all_scores[0]
+        baseline_omega = self._aggregator.combine(baseline_scores)
+        evidence.insert(0, f"Baseline composite score: {baseline_omega:.4f}.")
+
+        deltas: dict[str, float] = {}
+        score_index = 1
+        for operator_id, operator, operator_run, should_score in operator_runs:
+            if not should_score:
+                deltas[operator_id] = 0.0
+                continue
+            if operator_run is None:
+                msg = f"{operator_id} was marked scorable without a run."
+                raise RuntimeError(msg)
+            mutated_scores = all_scores[score_index]
+            score_index += 1
             mutated_omega = self._aggregator.combine(mutated_scores)
             delta = baseline_omega - mutated_omega
             deltas[operator_id] = delta
@@ -103,14 +136,27 @@ class FaultLocalizer:
             )
 
         stage_deltas = compute_stage_deltas(deltas, self._operators)
-        stage = choose_stage(stage_deltas, delta_threshold=self._delta_threshold)
-        confidence = confidence_for_stage(stage, stage_deltas)
+        if self._calibrator is None:
+            stage = choose_stage(
+                stage_deltas,
+                delta_threshold=self._delta_threshold,
+                stage_thresholds=self._stage_thresholds,
+            )
+            confidence = confidence_for_stage(stage, stage_deltas)
+        else:
+            calibrated = self._calibrator.predict(deltas, stage_deltas)
+            stage = calibrated.stage
+            confidence = calibrated.confidence
+            evidence.append(f"Calibrator: {self._calibrator.method}.")
+            if calibrated.metadata:
+                evidence.append(f"Calibration metadata: {calibrated.metadata}.")
         evidence.append(f"Predicted stage: {stage} with confidence {confidence:.4f}.")
         return FaultReport(
             stage=stage,
             confidence=confidence,
             deltas=deltas,
             stage_deltas=stage_deltas,
+            operator_status=operator_status,
             evidence=evidence,
         )
 
@@ -121,10 +167,33 @@ def score_run(
 ) -> dict[str, float]:
     """Score one run with all configured oracles."""
 
-    scores: dict[str, float] = {}
+    return score_runs([run], oracles)[0]
+
+
+def score_runs(
+    runs: Sequence[RAGRun],
+    oracles: Sequence[ScoreOracle],
+) -> list[dict[str, float]]:
+    """Score multiple runs with all configured oracles."""
+
+    scores_by_run: list[dict[str, float]] = [dict() for _ in runs]
+    if not runs:
+        return scores_by_run
     for oracle in oracles:
-        scores[oracle.name] = clamp_score(float(oracle.score(run)))
-    return scores
+        score_results = getattr(oracle, "score_results", None)
+        if callable(score_results):
+            values = [float(result.value) for result in score_results(runs)]
+        else:
+            values = [float(oracle.score(run)) for run in runs]
+        if len(values) != len(runs):
+            msg = (
+                f"Oracle {oracle.name} returned {len(values)} scores "
+                f"for {len(runs)} runs."
+            )
+            raise ValueError(msg)
+        for index, value in enumerate(values):
+            scores_by_run[index][oracle.name] = clamp_score(value)
+    return scores_by_run
 
 
 def compute_stage_deltas(
@@ -148,6 +217,7 @@ def choose_stage(
     stage_deltas: Mapping[Stage, float],
     *,
     delta_threshold: float,
+    stage_thresholds: Mapping[Stage, float] | None = None,
 ) -> DiagnosisStage:
     """Apply the final-plan thresholded argmax decision rule."""
 
@@ -155,7 +225,12 @@ def choose_stage(
         return "no_fault_detected"
     best_stage = max(STAGES, key=lambda stage: stage_deltas.get(stage, 0.0))
     best_delta = stage_deltas.get(best_stage, 0.0)
-    if best_delta <= delta_threshold:
+    threshold = (
+        float(delta_threshold)
+        if stage_thresholds is None
+        else float(stage_thresholds.get(best_stage, delta_threshold))
+    )
+    if best_delta <= threshold:
         return "no_fault_detected"
     return best_stage
 

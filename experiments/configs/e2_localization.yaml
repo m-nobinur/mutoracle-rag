@@ -11,6 +11,10 @@ smoke:
   query_limit: 5
   seeds: [13, 42, 91]
 
+dev:
+  query_limit: 20
+  seeds: [13]
+
 full:
   query_limit: 240
   seeds: [13, 42, 91]
@@ -28,4 +32,4 @@ localizer:
     llm_judge: 0.3
   delta_threshold: 0.05
   oracles: [nli, semantic_similarity, llm_judge]
-  work_units_per_record: 8
+  work_units_per_record: 12

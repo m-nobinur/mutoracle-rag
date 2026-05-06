@@ -1,14 +1,18 @@
 experiment:
-  id: e6_weighted_fast
-  title: "E6 weighted aggregation comparison (fast smoke)"
-  output_dir: experiments/results/e6_weighted_fast
+  id: e6_weighted
+  title: "E6 weighted aggregation comparison"
+  output_dir: experiments/results/e6_weighted
 
 dataset:
   path: data/rgb/rgb_v1.0.0/rgb_phase8.jsonl
   split: validation
 
 smoke:
-  query_limit: 2
+  query_limit: 5
+  seeds: [13, 42, 91]
+
+dev:
+  query_limit: 20
   seeds: [13]
 
 full:

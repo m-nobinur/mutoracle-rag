@@ -34,7 +34,25 @@ def test_planned_experiment_entry_points_exist() -> None:
         "e6_weighted.yaml",
     ):
         assert Path("experiments/configs", name).exists()
-    assert Path("docs/EXPERIMENT_PROTOCOL.md").exists()
+    assert Path("docs/EXPERIMENTS.md").exists()
+
+
+def test_phase_ten_release_artifacts_exist() -> None:
+    for path in (
+        "LICENSE",
+        "README.md",
+        "Makefile",
+        "pyproject.toml",
+        "data/manifests/datasets.json",
+        "data/fits/manifest.json",
+        "experiments/configs/e1_detection.yaml",
+        "experiments/configs/e2_localization.yaml",
+        "experiments/configs/e3_ablation.yaml",
+        "experiments/configs/e4_separability.yaml",
+        "experiments/configs/e5_latency.yaml",
+        "experiments/configs/e6_weighted.yaml",
+    ):
+        assert Path(path).exists()
 
 
 def test_phase_two_module_layout_exports_expected_symbols() -> None:
@@ -47,7 +65,19 @@ def test_phase_two_module_layout_exports_expected_symbols() -> None:
 
 def test_phase_three_module_layout_exports_expected_symbols() -> None:
     assert get_operator("CI")
-    assert set(mutation_registry()) == {"CI", "CR", "CS", "QP", "QN", "FS", "FA"}
+    assert set(mutation_registry()) == {
+        "CI",
+        "CR",
+        "CS",
+        "QP",
+        "QN",
+        "QD",
+        "QI",
+        "FS",
+        "FA",
+        "FE",
+        "GN",
+    }
 
 
 def test_phase_four_module_layout_exports_expected_symbols() -> None:

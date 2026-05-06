@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import time
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from importlib import metadata as importlib_metadata
 from pathlib import Path
@@ -31,7 +31,7 @@ from mutoracle.mutations.base import content_similarity
 from mutoracle.oracles import LLMJudgeOracle, NLIOracle, SemanticSimilarityOracle
 from mutoracle.oracles.base import context_text
 
-RunMode = Literal["smoke", "full"]
+RunMode = Literal["smoke", "dev", "full"]
 OracleMode = Literal["fixture", "real"]
 
 DEFAULT_SEEDS = (13, 42, 91)
@@ -41,7 +41,7 @@ POLICY_CONFIRM_COST_CAP_USD = 5.0
 
 @dataclass(frozen=True)
 class ExperimentRunSettings:
-    """Resolved settings for one smoke or full experiment invocation."""
+    """Resolved settings for one experiment invocation."""
 
     experiment_id: str
     title: str
@@ -129,7 +129,7 @@ def resolve_run_settings(
     )
     dataset_path = Path(str(dataset.get("path", DEFAULT_FITS_PATH)))
     split = str(dataset.get("split", "test"))
-    query_limit = int(mode_config.get("query_limit", 5 if mode == "smoke" else 60))
+    query_limit = int(mode_config.get("query_limit", _default_query_limit(mode)))
     if query_limit < 1:
         msg = "query_limit must be at least 1"
         raise ValueError(msg)
@@ -155,6 +155,27 @@ def resolve_run_settings(
         ),
         require_smoke_before_full=bool(cost.get("require_smoke_before_full", True)),
     )
+
+
+def override_run_settings(
+    settings: ExperimentRunSettings,
+    *,
+    query_limit: int | None = None,
+    seeds: Sequence[int] | None = None,
+) -> ExperimentRunSettings:
+    """Return run settings with validated CLI overrides applied."""
+
+    selected_limit = settings.query_limit if query_limit is None else int(query_limit)
+    if selected_limit < 1:
+        msg = "query_limit must be at least 1"
+        raise ValueError(msg)
+
+    selected_seeds = settings.seeds if seeds is None else [int(seed) for seed in seeds]
+    if not selected_seeds:
+        msg = "At least one seed is required"
+        raise ValueError(msg)
+
+    return replace(settings, query_limit=selected_limit, seeds=selected_seeds)
 
 
 def artifact_paths(settings: ExperimentRunSettings) -> ArtifactPaths:
@@ -190,15 +211,13 @@ def selected_fits_records(settings: ExperimentRunSettings) -> list[dict[str, Any
             if settings.split != "all" and row.get("split") != settings.split:
                 continue
             records.append(row)
-            if len(records) >= settings.query_limit:
-                break
     if not records:
         msg = (
             f"No experiment records selected from {settings.dataset_path} "
             f"for split={settings.split!r}."
         )
         raise ValueError(msg)
-    return records
+    return _balanced_record_slice(records, limit=settings.query_limit)
 
 
 def expected_diagnosis_stage(record: Mapping[str, Any]) -> DiagnosisStage:
@@ -554,6 +573,30 @@ def print_cost_estimate(
     )
 
 
+def print_progress(
+    *,
+    label: str,
+    completed: int,
+    total: int,
+    started_at: float,
+    every: int = 25,
+) -> None:
+    """Print bounded progress for long-running experiment scripts."""
+
+    if total < 1:
+        return
+    interval = max(1, every)
+    if completed not in {1, total} and completed % interval != 0:
+        return
+    elapsed = elapsed_since(started_at)
+    rate = completed / elapsed if elapsed > 0 else 0.0
+    eta = max(0.0, (total - completed) / rate) if rate > 0 else 0.0
+    print(
+        f"{label}: {completed}/{total} elapsed={elapsed:.1f}s eta={eta:.1f}s",
+        flush=True,
+    )
+
+
 def ensure_full_run_allowed(
     settings: ExperimentRunSettings,
     *,
@@ -687,6 +730,14 @@ def elapsed_since(started: float) -> float:
     return max(0.0, time.perf_counter() - started)
 
 
+def _default_query_limit(mode: RunMode) -> int:
+    if mode == "smoke":
+        return 5
+    if mode == "dev":
+        return 20
+    return 60
+
+
 def _accuracy_row(
     group_key: str,
     group: str,
@@ -711,6 +762,59 @@ def _mapping(value: object) -> dict[str, Any]:
         msg = "Expected config section to be a mapping."
         raise ValueError(msg)
     return value
+
+
+def _balanced_record_slice(
+    records: Sequence[dict[str, Any]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    if len(records) <= limit:
+        return list(records)
+
+    buckets: dict[str, list[dict[str, Any]]] = {}
+    for row in records:
+        buckets.setdefault(_selection_label(row), []).append(row)
+
+    labels = sorted(buckets, key=_selection_label_order)
+    selected: list[dict[str, Any]] = []
+    while len(selected) < limit:
+        made_progress = False
+        for label in labels:
+            bucket = buckets[label]
+            if not bucket:
+                continue
+            selected.append(bucket.pop(0))
+            made_progress = True
+            if len(selected) >= limit:
+                break
+        if not made_progress:
+            break
+    return selected
+
+
+def _selection_label(row: Mapping[str, Any]) -> str:
+    explicit = str(row.get("expected_stage", "")).strip()
+    if explicit:
+        return explicit
+    stage = str(row.get("fault_stage", "")).strip()
+    if stage:
+        return "no_fault_detected" if stage == "no_fault" else stage
+    label = str(row.get("expected_label", row.get("label", ""))).strip()
+    return label or "unlabeled"
+
+
+def _selection_label_order(label: str) -> tuple[int, str]:
+    order = {
+        "retrieval": 0,
+        "prompt": 1,
+        "generation": 2,
+        "no_fault": 3,
+        "no_fault_detected": 3,
+        "faithful": 3,
+        "hallucinated": 4,
+    }
+    return (order.get(label, 99), label)
 
 
 def _noise_text(record: Mapping[str, Any]) -> str | None:

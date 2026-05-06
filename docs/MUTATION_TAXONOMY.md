@@ -1,6 +1,6 @@
 # Mutation Taxonomy
 
-MutOracle-RAG uses seven canonical mutation operators. Operator IDs are stable
+MutOracle-RAG uses eleven canonical mutation operators. Operator IDs are stable
 public identifiers and must stay consistent across code, configs, docs, plots,
 and result records.
 
@@ -11,8 +11,12 @@ and result records.
 | CS | Context Shuffle | retrieval | Seed-shuffle retrieved passages; reject when fewer than two passages exist. |
 | QP | Query Paraphrase | prompt | Apply a high-overlap rule paraphrase and reject below the similarity gate. |
 | QN | Query Negation | prompt | Insert a grammatical negation and reject unsupported query shapes. |
+| QD | Query Detail Drop | prompt | Drop a trailing query constraint when a similarity gate passes. |
+| QI | Query Instruction Injection | prompt | Append an explicit support-only instruction. |
 | FS | Factoid Synonym Substitution | generation | Replace one supported answer span with a near-synonym. |
 | FA | Factoid Antonym Substitution | generation | Replace one supported answer span with an antonym. |
+| FE | Factoid Entity Swap | generation | Replace a supported entity or domain phrase with a distractor. |
+| GN | Answer Negation | generation | Add a local negation to the generated answer. |
 
 ## Metadata Contract
 
@@ -137,6 +141,26 @@ across the retrieval pipeline.
 After answer:
 MutOracle-RAG obscures hallucination faults by comparing oracle confidence
 across the retrieval pipeline.
+```
+
+FE:
+
+```text
+Before answer:
+Elon Musk founded SpaceX.
+
+After answer:
+Jeff Bezos founded SpaceX.
+```
+
+GN:
+
+```text
+Before answer:
+Elon Musk founded SpaceX.
+
+After answer:
+Not Elon Musk founded SpaceX.
 ```
 
 ## CLI

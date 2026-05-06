@@ -36,7 +36,9 @@ from mutoracle.experiments import (
     fixture_oracles,
     load_experiment_config,
     load_runtime_config,
+    override_run_settings,
     print_cost_estimate,
+    print_progress,
     provider_route_for_oracles,
     rag_run_from_fits_record,
     real_model_ids,
@@ -154,7 +156,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mode",
-        choices=["smoke", "full"],
+        choices=["smoke", "dev", "full"],
         default="smoke",
         help="Phase 8 run mode when --experiment-config is used.",
     )
@@ -172,6 +174,25 @@ def _parse_args() -> argparse.Namespace:
         "--confirmed-smoke",
         action="store_true",
         help="Confirm Phase 8 smoke completion before a full run.",
+    )
+    parser.add_argument(
+        "--query-limit",
+        type=int,
+        default=None,
+        help="Override the configured query limit for this run.",
+    )
+    parser.add_argument(
+        "--seeds",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Override configured seeds for this run.",
+    )
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        default=25,
+        help="Print progress every N scored rows.",
     )
     args = parser.parse_args()
     if args.smoke:
@@ -206,6 +227,11 @@ def _run_phase8_experiment(args: argparse.Namespace) -> None:
         args.experiment_config,
         mode=args.mode,
         default_experiment_id="e1_detection",
+    )
+    settings = override_run_settings(
+        settings,
+        query_limit=args.query_limit,
+        seeds=args.seeds,
     )
     raw_config = load_experiment_config(args.experiment_config)
     baseline_config = _section(raw_config, "baseline")
@@ -255,6 +281,15 @@ def _run_phase8_experiment(args: argparse.Namespace) -> None:
 
     rows: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
+    total = len(settings.seeds) * len(records) * len(baselines)
+    completed = 0
+    run_started = timed_seconds()
+    print(
+        f"Running {settings.experiment_id} mode={settings.mode} "
+        f"records={len(records)} seeds={settings.seeds} "
+        f"baselines={baseline_names} total_rows={total}",
+        flush=True,
+    )
     for seed in settings.seeds:
         for record in records:
             run = rag_run_from_fits_record(record, seed=seed)
@@ -314,6 +349,15 @@ def _run_phase8_experiment(args: argparse.Namespace) -> None:
                             "reason": str(error),
                             "error_type": type(error).__name__,
                         }
+                    )
+                finally:
+                    completed += 1
+                    print_progress(
+                        label=f"{settings.experiment_id} progress",
+                        completed=completed,
+                        total=total,
+                        started_at=run_started,
+                        every=args.progress_every,
                     )
 
     row_count = write_jsonl(rows, paths.raw_jsonl)

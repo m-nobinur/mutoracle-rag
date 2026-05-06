@@ -16,6 +16,7 @@ from mutoracle.oracles import (
     cosine_to_unit_interval,
     parse_judge_response,
 )
+from mutoracle.oracles.nli import _split_pipeline_output
 from mutoracle.provider import ProviderCompletion
 
 
@@ -45,6 +46,24 @@ class CountingNLIBackend:
             "neutral": 0.1,
             "contradiction": 0.08,
         }
+
+
+class BatchCountingNLIBackend:
+    def __init__(self) -> None:
+        self.single_calls = 0
+        self.batch_calls = 0
+
+    def probabilities(self, *, premise: str, hypothesis: str) -> dict[str, float]:
+        del premise, hypothesis
+        self.single_calls += 1
+        return {"entailment": 0.1}
+
+    def probabilities_many(
+        self,
+        pairs: Sequence[tuple[str, str]],
+    ) -> list[dict[str, float]]:
+        self.batch_calls += 1
+        return [{"entailment": 0.2 + index * 0.1} for index, _ in enumerate(pairs)]
 
 
 class SequenceJudgeProvider:
@@ -119,6 +138,32 @@ def test_semantic_oracle_scores_tiny_fixture_and_uses_cache(tmp_path: Path) -> N
     assert backend.calls == 1
 
 
+def test_semantic_oracle_batches_uncached_runs(tmp_path: Path) -> None:
+    ledger = SQLiteCacheLedger(tmp_path / "cache.sqlite3")
+    backend = CountingEmbeddingBackend()
+    oracle = SemanticSimilarityOracle(
+        ledger=ledger,
+        backend=backend,
+        model_name="fake-embedding",
+    )
+    runs = [
+        RAGRun(
+            query=f"What does MutOracle do {index}?",
+            passages=["MutOracle localizes RAG failures."],
+            answer="MutOracle localizes RAG failures.",
+        )
+        for index in range(3)
+    ]
+
+    first = oracle.score_results(runs)
+    second = oracle.score_results(runs)
+
+    assert [result.value for result in first] == pytest.approx([1.0, 1.0, 1.0])
+    assert all(result.metadata["cache_hit"] is False for result in first)
+    assert all(result.metadata["cache_hit"] is True for result in second)
+    assert backend.calls == 1
+
+
 def test_nli_oracle_scores_tiny_fixture_and_uses_cache(tmp_path: Path) -> None:
     run = RAGRun(
         query="What does MutOracle do?",
@@ -136,6 +181,47 @@ def test_nli_oracle_scores_tiny_fixture_and_uses_cache(tmp_path: Path) -> None:
     assert second.value == pytest.approx(0.82)
     assert second.metadata["cache_hit"] is True
     assert backend.calls == 1
+
+
+def test_nli_oracle_uses_backend_batch_api_for_uncached_runs(tmp_path: Path) -> None:
+    ledger = SQLiteCacheLedger(tmp_path / "cache.sqlite3")
+    backend = BatchCountingNLIBackend()
+    oracle = NLIOracle(ledger=ledger, backend=backend, model_name="fake-nli")
+    runs = [
+        RAGRun(
+            query=f"What does MutOracle do {index}?",
+            passages=[f"Premise {index}"],
+            answer=f"Hypothesis {index}",
+        )
+        for index in range(3)
+    ]
+
+    results = oracle.score_results(runs)
+    cached = oracle.score_results(runs)
+
+    assert [result.value for result in results] == pytest.approx([0.2, 0.3, 0.4])
+    assert all(result.metadata["cache_hit"] is False for result in results)
+    assert all(result.metadata["cache_hit"] is True for result in cached)
+    assert backend.batch_calls == 1
+    assert backend.single_calls == 0
+
+
+def test_nli_batch_handles_empty_inputs_and_pipeline_output_shapes(
+    tmp_path: Path,
+) -> None:
+    ledger = SQLiteCacheLedger(tmp_path / "cache.sqlite3")
+    backend = BatchCountingNLIBackend()
+    oracle = NLIOracle(ledger=ledger, backend=backend, model_name="fake-nli")
+
+    empty_result = oracle.score_results([RAGRun(query="q", passages=[], answer="")])[0]
+
+    assert empty_result.value == 0.0
+    assert empty_result.metadata["reason"] == "empty_premise_or_hypothesis"
+    assert backend.batch_calls == 0
+    assert _split_pipeline_output([], expected=0) == []
+    assert _split_pipeline_output(
+        {"label": "ENTAILMENT", "score": 0.9}, expected=1
+    ) == [[{"label": "ENTAILMENT", "score": 0.9}]]
 
 
 def test_nli_cache_reuses_scores_for_query_only_changes(tmp_path: Path) -> None:
