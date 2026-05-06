@@ -1,7 +1,7 @@
 # Experiments
 
-Experiments run from YAML configs under `experiments/configs/`. Each script
-writes the same artifact bundle beside its raw result file:
+Experiments are configured from YAML files under `experiments/configs/`. Every
+runner writes the same artifact bundle beside its raw result file:
 
 - raw JSONL records;
 - summary CSV;
@@ -9,14 +9,22 @@ writes the same artifact bundle beside its raw result file:
 - run manifest JSON;
 - failure JSONL with per-example reasons.
 
-Do not run experiments from notebooks, and do not type metrics manually.
-Analysis assets are generated from saved artifacts by
-`experiments/analyze_results.py`.
+Use saved artifacts as the source of truth. Do not hand-edit metrics and do not
+run release experiments from notebooks.
 
-Use smoke mode to check plumbing, dev mode while changing code, and full mode
-only when freezing release-facing artifacts.
+## Workflow
 
-## Smoke
+| Mode | When to use it | Commands |
+| --- | --- | --- |
+| Smoke | First check after a clean clone or CLI change | `make experiment-smoke` |
+| Dev | Iterating on code or prompts | `make experiment-dev` and `make analysis-dev` |
+| Full | Freezing release-facing artifacts | `make experiment-full`, `uv run python experiments/run_calibrated_localization.py`, `make analysis` |
+
+Smoke mode is credential-free where possible. Dev mode writes separate
+`*_dev_*` artifacts, uses 20 queries and seed `13`, and keeps output small.
+Full mode records seeds `13`, `42`, and `91` unless the config overrides them.
+
+## Raw Smoke Commands
 
 ```bash
 uv run python experiments/run_baselines.py --experiment-config experiments/configs/e1_detection.yaml --mode smoke
@@ -26,32 +34,6 @@ uv run python experiments/run_ablation.py --config experiments/configs/e4_separa
 uv run python experiments/run_latency.py --config experiments/configs/e5_latency.yaml --mode smoke
 uv run python experiments/run_ablation.py --config experiments/configs/e6_weighted.yaml --mode smoke
 ```
-
-Smoke mode is credential-free where possible and is the right first command
-after a clean clone.
-
-## Development
-
-```bash
-make experiment-dev
-make analysis-dev
-```
-
-`dev` mode writes separate `*_dev_*` artifacts, uses 20 queries and seed `13`,
-and prints progress updates while each script is running.
-
-## Full Artifact Runs
-
-```bash
-make experiment-full
-uv run python experiments/run_calibrated_localization.py
-make analysis
-uv run mutoracle release-check --strict-full-results
-```
-
-Each config records seeds `13`, `42`, and `91` unless explicitly overridden.
-Full mode is blocked until a smoke manifest exists, unless the operator passes
-`--confirmed-smoke`.
 
 ## Experiment Mapping
 
@@ -65,23 +47,18 @@ Full mode is blocked until a smoke manifest exists, unless the operator passes
 | E5 | `e5_latency.yaml` | `run_latency.py` | Runtime latency audit artifact |
 | E6 | `e6_weighted.yaml` | `run_ablation.py` | Uniform, weighted, and confidence-gated aggregation comparison |
 
-## Analysis Assets
+## Analysis Outputs
 
-Analysis consumes saved artifacts and regenerates deterministic tables, figures,
-and run-ID traceability assets without hand-entered metrics:
+Regenerate analysis assets from saved artifacts with:
 
 ```bash
 make analysis
 ```
 
-`make analysis` writes outputs to a local-only `.local/analysis-assets/`
-directory and materializes DuckDB at `experiments/results/analysis.duckdb`.
-Use `make analysis-smoke` for credential-free workflow validation and
-`make analysis-dev` for development-scale checks.
+This writes local-only outputs to `.local/analysis-assets/` and materializes
+DuckDB at `experiments/results/analysis.duckdb`. Use `make analysis-smoke` for
+credential-free validation and `make analysis-dev` for development-scale runs.
 
-Release summaries primarily use E1, E2 calibrated, and E4 result tables. E3,
-E5, and E6 assets are retained for reproducibility review but are not treated
-as headline evidence. E4 reports both applied counts and rejection rates because
-some mutation operators are intentionally guarded; a zero delta is valid, but it
-may mean either a neutral applied mutation or a rejected mutation with no
-behavioral score.
+Release summaries mainly rely on E1, calibrated E2, and E4 outputs. E3, E5,
+and E6 are still part of the reproducibility record but are not the main
+headline tables.
