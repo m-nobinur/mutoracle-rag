@@ -17,6 +17,7 @@ from mutoracle.contracts import (
     RAGRun,
     Stage,
 )
+from mutoracle.localizer.calibration import DeltaVectorCalibrator
 from mutoracle.mutations import mutation_registry
 from mutoracle.oracles import clamp_score
 
@@ -44,6 +45,8 @@ class FaultLocalizer:
         delta_threshold: float,
         operators: Mapping[str, MutationOperator] | None = None,
         seed: int = 2026,
+        stage_thresholds: Mapping[Stage, float] | None = None,
+        calibrator: DeltaVectorCalibrator | None = None,
     ) -> None:
         self._pipeline = pipeline
         self._oracles = list(oracles)
@@ -58,6 +61,10 @@ class FaultLocalizer:
         self._delta_threshold = delta_threshold
         self._operators = dict(mutation_registry() if operators is None else operators)
         self._seed = seed
+        self._stage_thresholds = (
+            None if stage_thresholds is None else dict(stage_thresholds)
+        )
+        self._calibrator = calibrator
 
     def diagnose(self, query: str) -> FaultReport:
         """Return a stage-level fault report for one query."""
@@ -65,6 +72,7 @@ class FaultLocalizer:
         baseline = self._pipeline.run(query)
         scorable_runs = [baseline]
         operator_runs: list[tuple[str, MutationOperator, RAGRun | None, bool]] = []
+        operator_status: dict[str, dict[str, Any]] = {}
         evidence = [
             f"Delta threshold: {self._delta_threshold:.4f}.",
         ]
@@ -76,6 +84,12 @@ class FaultLocalizer:
             if isinstance(mutation, dict) and mutation.get("rejected") is True:
                 reason = mutation.get("rejection_reason", "mutation rejected")
                 evidence.append(f"{operator_id} skipped: {reason}.")
+                operator_status[operator_id] = {
+                    "stage": operator.stage,
+                    "applied": False,
+                    "rejected": True,
+                    "reason": str(reason),
+                }
                 operator_runs.append((operator_id, operator, None, False))
                 continue
 
@@ -90,6 +104,11 @@ class FaultLocalizer:
                     f"{operator_id} reran pipeline with mutated query for scoring."
                 )
             scorable_runs.append(scored_run)
+            operator_status[operator_id] = {
+                "stage": operator.stage,
+                "applied": True,
+                "rejected": False,
+            }
             operator_runs.append((operator_id, operator, scored_run, True))
 
         all_scores = score_runs(scorable_runs, self._oracles)
@@ -117,14 +136,27 @@ class FaultLocalizer:
             )
 
         stage_deltas = compute_stage_deltas(deltas, self._operators)
-        stage = choose_stage(stage_deltas, delta_threshold=self._delta_threshold)
-        confidence = confidence_for_stage(stage, stage_deltas)
+        if self._calibrator is None:
+            stage = choose_stage(
+                stage_deltas,
+                delta_threshold=self._delta_threshold,
+                stage_thresholds=self._stage_thresholds,
+            )
+            confidence = confidence_for_stage(stage, stage_deltas)
+        else:
+            calibrated = self._calibrator.predict(deltas, stage_deltas)
+            stage = calibrated.stage
+            confidence = calibrated.confidence
+            evidence.append(f"Calibrator: {self._calibrator.method}.")
+            if calibrated.metadata:
+                evidence.append(f"Calibration metadata: {calibrated.metadata}.")
         evidence.append(f"Predicted stage: {stage} with confidence {confidence:.4f}.")
         return FaultReport(
             stage=stage,
             confidence=confidence,
             deltas=deltas,
             stage_deltas=stage_deltas,
+            operator_status=operator_status,
             evidence=evidence,
         )
 
@@ -185,6 +217,7 @@ def choose_stage(
     stage_deltas: Mapping[Stage, float],
     *,
     delta_threshold: float,
+    stage_thresholds: Mapping[Stage, float] | None = None,
 ) -> DiagnosisStage:
     """Apply the final-plan thresholded argmax decision rule."""
 
@@ -192,7 +225,12 @@ def choose_stage(
         return "no_fault_detected"
     best_stage = max(STAGES, key=lambda stage: stage_deltas.get(stage, 0.0))
     best_delta = stage_deltas.get(best_stage, 0.0)
-    if best_delta <= delta_threshold:
+    threshold = (
+        float(delta_threshold)
+        if stage_thresholds is None
+        else float(stage_thresholds.get(best_stage, delta_threshold))
+    )
+    if best_delta <= threshold:
         return "no_fault_detected"
     return best_stage
 

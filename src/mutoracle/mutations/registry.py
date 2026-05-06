@@ -6,10 +6,17 @@ from typing import cast
 
 from mutoracle.contracts import MutationOperator, Stage
 from mutoracle.mutations.generation import (
+    AnswerNegationMutation,
     FactoidAntonymSubstitutionMutation,
+    FactoidEntitySwapMutation,
     FactoidSynonymSubstitutionMutation,
 )
-from mutoracle.mutations.prompt import QueryNegationMutation, QueryParaphraseMutation
+from mutoracle.mutations.prompt import (
+    QueryDetailDropMutation,
+    QueryInstructionInjectionMutation,
+    QueryNegationMutation,
+    QueryParaphraseMutation,
+)
 from mutoracle.mutations.retrieval import (
     ContextInjectionMutation,
     ContextRemovalMutation,
@@ -26,8 +33,12 @@ def mutation_registry() -> dict[str, MutationOperator]:
         ("CS", cast("MutationOperator", ContextShuffleMutation())),
         ("QP", cast("MutationOperator", QueryParaphraseMutation())),
         ("QN", cast("MutationOperator", QueryNegationMutation())),
+        ("QD", cast("MutationOperator", QueryDetailDropMutation())),
+        ("QI", cast("MutationOperator", QueryInstructionInjectionMutation())),
         ("FS", cast("MutationOperator", FactoidSynonymSubstitutionMutation())),
         ("FA", cast("MutationOperator", FactoidAntonymSubstitutionMutation())),
+        ("FE", cast("MutationOperator", FactoidEntitySwapMutation())),
+        ("GN", cast("MutationOperator", AnswerNegationMutation())),
     ]
     return dict(operators)
 

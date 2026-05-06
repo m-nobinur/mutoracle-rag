@@ -8,7 +8,19 @@ from typing import Any
 
 from mutoracle.contracts import RAGRun, Stage
 
-CANONICAL_OPERATOR_IDS = ("CI", "CR", "CS", "QP", "QN", "FS", "FA")
+CANONICAL_OPERATOR_IDS = (
+    "CI",
+    "CR",
+    "CS",
+    "QP",
+    "QN",
+    "QD",
+    "QI",
+    "FS",
+    "FA",
+    "FE",
+    "GN",
+)
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?")
 
@@ -111,5 +123,5 @@ def preserve_capitalization(source: str, replacement: str) -> str:
     if source.isupper():
         return replacement.upper()
     if source[:1].isupper():
-        return replacement.capitalize()
+        return f"{replacement[:1].upper()}{replacement[1:]}"
     return replacement

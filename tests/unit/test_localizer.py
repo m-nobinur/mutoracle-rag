@@ -9,6 +9,11 @@ from mutoracle.aggregation import UniformAggregator
 from mutoracle.config import AggregationConfig
 from mutoracle.contracts import RAGRun, Stage
 from mutoracle.localizer import FaultLocalizer, compute_stage_deltas
+from mutoracle.localizer.calibration import (
+    DeltaPrediction,
+    NoFaultGate,
+    StageThresholdCalibrator,
+)
 from mutoracle.localizer.fault_localizer import score_runs
 from mutoracle.mutations.base import clone_run
 
@@ -146,6 +151,22 @@ class BadBatchOracle:
         return []
 
 
+class PromptCalibrator:
+    method = "test_prompt_calibrator"
+
+    def predict(
+        self,
+        deltas: dict[str, float],
+        stage_deltas: dict[Stage, float],
+    ) -> DeltaPrediction:
+        return DeltaPrediction(
+            stage="prompt",
+            confidence=0.7,
+            scores={"prompt": 0.7},
+            metadata={"operators": sorted(deltas), "stages": sorted(stage_deltas)},
+        )
+
+
 def test_worked_example_attributes_largest_delta_stage() -> None:
     localizer = FaultLocalizer(
         pipeline=StaticPipeline(),
@@ -165,6 +186,7 @@ def test_worked_example_attributes_largest_delta_stage() -> None:
     assert report.confidence == pytest.approx(0.6 / (0.6 + 0.1 + 0.2))
     assert report.deltas["CI"] == pytest.approx(0.6)
     assert report.stage_deltas["retrieval"] == pytest.approx(0.6)
+    assert report.operator_status["CI"]["applied"] is True
 
 
 def test_localizer_batches_baseline_and_mutation_scoring() -> None:
@@ -222,6 +244,52 @@ def test_threshold_controls_no_fault_decision() -> None:
     assert report.confidence == 0.0
 
 
+def test_stage_specific_thresholds_gate_the_best_stage() -> None:
+    localizer = FaultLocalizer(
+        pipeline=StaticPipeline(),
+        oracles=[MetadataOracle()],
+        aggregator=UniformAggregator(),
+        delta_threshold=0.05,
+        stage_thresholds={"retrieval": 0.7, "prompt": 0.05, "generation": 0.05},
+        operators={"CI": ScoreMutation("CI", "retrieval", 0.4)},
+    )
+
+    report = localizer.diagnose("What is supported?")
+
+    assert report.stage == "no_fault_detected"
+
+
+def test_calibrator_can_override_transparent_delta_rule() -> None:
+    localizer = FaultLocalizer(
+        pipeline=StaticPipeline(),
+        oracles=[MetadataOracle()],
+        aggregator=UniformAggregator(),
+        delta_threshold=0.05,
+        calibrator=PromptCalibrator(),
+        operators={"CI": ScoreMutation("CI", "retrieval", 0.4)},
+    )
+
+    report = localizer.diagnose("What is supported?")
+
+    assert report.stage == "prompt"
+    assert report.confidence == pytest.approx(0.7)
+    assert any("Calibrator: test_prompt_calibrator" in line for line in report.evidence)
+
+
+def test_no_fault_gate_and_stage_threshold_calibrator() -> None:
+    gate = NoFaultGate(max_delta_threshold=0.2)
+    calibrator = StageThresholdCalibrator(
+        stage_thresholds={"retrieval": 0.1, "prompt": 0.1, "generation": 0.1},
+        no_fault_gate=gate,
+    )
+
+    gated = calibrator.predict({"CI": 0.1}, {"retrieval": 0.1})
+    passed = calibrator.predict({"CI": 0.5}, {"retrieval": 0.5})
+
+    assert gated.stage == "no_fault_detected"
+    assert passed.stage == "retrieval"
+
+
 def test_negative_and_missing_deltas_do_not_create_confidence() -> None:
     stage_deltas = compute_stage_deltas(
         {"CI": -0.2},
@@ -271,6 +339,27 @@ def test_explicit_empty_operator_mapping_is_respected() -> None:
     assert report.deltas == {}
     assert report.stage_deltas == {"retrieval": 0.0, "prompt": 0.0, "generation": 0.0}
     assert report.stage == "no_fault_detected"
+
+
+def test_rejected_operator_status_is_recorded() -> None:
+    localizer = FaultLocalizer(
+        pipeline=StaticPipeline(),
+        oracles=[MetadataOracle()],
+        aggregator=UniformAggregator(),
+        delta_threshold=0.05,
+        operators={"CS": get_rejecting_shuffle_operator()},
+    )
+
+    report = localizer.diagnose("What is supported?")
+
+    assert report.operator_status["CS"]["rejected"] is True
+    assert report.operator_status["CS"]["applied"] is False
+
+
+def get_rejecting_shuffle_operator() -> object:
+    from mutoracle.mutations.retrieval import ContextShuffleMutation
+
+    return ContextShuffleMutation()
 
 
 def test_operator_order_does_not_change_randomized_mutation_scores() -> None:
