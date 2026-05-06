@@ -940,10 +940,14 @@ def experiment_design_figure() -> tuple[str, str, dict[str, Any]]:
             f'fill="{FIG_MUTED}">audit / sensitivity</text>',
         ]
     )
-    return "fig_experiment_design.svg", _svg(430, 282, parts), {
-        "run_ids": [],
-        "source_files": [],
-    }
+    return (
+        "fig_experiment_design.svg",
+        _svg(430, 282, parts),
+        {
+            "run_ids": [],
+            "source_files": [],
+        },
+    )
 
 
 def calibration_flow_figure() -> tuple[str, str, dict[str, Any]]:
@@ -1045,19 +1049,23 @@ def calibration_flow_figure() -> tuple[str, str, dict[str, Any]]:
             'stroke-dasharray="4 3" marker-end="url(#arrow)"/>',
             f'<text x="366" y="114" font-size="8" font-family="{FIG_FONT}" '
             f'fill="{FIG_MUTED}">evaluation only</text>',
-            f'<rect x="160" y="202" width="110" height="34" rx="4" '
+            f'<rect x="294" y="202" width="118" height="34" rx="4" '
             f'fill="{FIG_BLUE_PANEL}" stroke="{FIG_ACCENT_2}" stroke-width="1.1"/>',
-            f'<text x="215" y="223" text-anchor="middle" font-size="9" '
+            f'<text x="353" y="223" text-anchor="middle" font-size="9" '
             f'font-weight="700" font-family="{FIG_FONT}" fill="{FIG_TEXT}">'
             "90.0% logistic</text>",
-            f'<path d="M353 176 L353 219 L274 219" stroke="{FIG_ACCENT}" '
+            f'<path d="M353 176 L353 196" stroke="{FIG_ACCENT}" '
             'stroke-width="1.4" marker-end="url(#arrow)"/>',
         ]
     )
-    return "fig_calibration_flow.svg", _svg(430, 252, parts), {
-        "run_ids": [],
-        "source_files": [],
-    }
+    return (
+        "fig_calibration_flow.svg",
+        _svg(430, 252, parts),
+        {
+            "run_ids": [],
+            "source_files": [],
+        },
+    )
 
 
 def localizer_accuracy_figure(
@@ -1102,8 +1110,8 @@ def localizer_accuracy_figure(
                 f'<text x="18" y="{y + 15}" font-size="9" '
                 'font-family="Arial, sans-serif">'
                 f"{html.escape(label)}</text>",
-                '<rect x="166" y="{y}" width="220" height="18" rx="3" '
-                'fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.6"/>'.format(y=y),
+                f'<rect x="166" y="{y}" width="220" height="18" rx="3" '
+                f'fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.6"/>',
                 f'<rect x="166" y="{y}" width="{width:.1f}" height="18" rx="3" '
                 f'fill="{"#2563eb" if value >= 0.7 else "#94a3b8"}"/>',
                 f'<text x="{166 + width + 8:.1f}" y="{y + 14}" font-size="10" '
@@ -1121,9 +1129,13 @@ def localizer_accuracy_figure(
         ]
     )
     artifacts = [artifact for _, _, artifact in variants]
-    return "fig_localizer_accuracy.svg", _svg(450, 245, parts), _provenance(
-        artifacts,
-        [],
+    return (
+        "fig_localizer_accuracy.svg",
+        _svg(450, 245, parts),
+        _provenance(
+            artifacts,
+            [],
+        ),
     )
 
 
@@ -1141,8 +1153,7 @@ def delta_heatmap(
             selected = [
                 float(row["delta"])
                 for row in stage_rows
-                if row.get("operator") == operator
-                and row.get("applied") is not False
+                if row.get("operator") == operator and row.get("applied") is not False
             ]
             values[(stage, operator)] = mean(selected)
     svg = _heatmap_svg(

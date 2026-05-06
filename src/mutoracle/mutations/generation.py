@@ -135,9 +135,7 @@ class AnswerNegationMutation:
                 rejected=True,
                 rejection_reason="answer is empty or already negated",
             )
-        auxiliary_pattern = (
-            r"\b(is|are|was|were|has|have|had|can|should|would|will)\b"
-        )
+        auxiliary_pattern = r"\b(is|are|was|were|has|have|had|can|should|would|will)\b"
         if re.search(auxiliary_pattern, answer):
             candidate = re.sub(
                 auxiliary_pattern,

@@ -144,7 +144,7 @@ def test_generated_figures_fit_column_width_and_have_legible_text(
         assert font_sizes
         assert min(font_sizes) >= 8.0
 
-        text_elements = re.findall(r"<text\\b[^>]*>", svg)
+        text_elements = re.findall(r"<text\b[^>]*>", svg)
         assert text_elements
         assert all('font-family="Arial, sans-serif"' in tag for tag in text_elements)
 
