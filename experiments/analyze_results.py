@@ -39,6 +39,7 @@ REQUIRED_EXPERIMENTS = (
     "e5_latency",
     "e6_weighted",
 )
+OPTIONAL_EXPERIMENTS = ("e2_localization_calibrated",)
 STAGE_LABELS = ("retrieval", "prompt", "generation", "no_fault_detected")
 MUTATION_STAGES = {
     "CI": "retrieval",
@@ -46,8 +47,12 @@ MUTATION_STAGES = {
     "CS": "retrieval",
     "QP": "prompt",
     "QN": "prompt",
+    "QD": "prompt",
+    "QI": "prompt",
     "FS": "generation",
     "FA": "generation",
+    "FE": "generation",
+    "GN": "generation",
 }
 
 
@@ -116,6 +121,15 @@ def analyze_results(
         mode=mode,
         require_experiments=require_experiments,
     )
+    artifacts = [
+        *artifacts,
+        *discover_optional_artifacts(
+            results_dir=results_dir,
+            mode=mode,
+            experiment_ids=OPTIONAL_EXPERIMENTS,
+            existing_experiment_ids={artifact.experiment_id for artifact in artifacts},
+        ),
+    ]
     connection = connect_duckdb(duckdb_path)
     import_results(connection, artifacts)
 
@@ -146,6 +160,7 @@ def analyze_results(
             ),
             localization_table(
                 rows_by_experiment["e2_localization"],
+                rows_by_experiment.get("e2_localization_calibrated", []),
                 manifests,
                 seed,
                 bootstrap_samples,
@@ -193,9 +208,20 @@ def analyze_results(
     if make_figures:
         figure_payloads = [
             architecture_figure(),
+            experiment_design_figure(),
+            calibration_flow_figure(),
+            localizer_accuracy_figure(
+                rows_by_experiment["e2_localization"],
+                rows_by_experiment.get("e2_localization_calibrated", []),
+                manifests,
+            ),
             delta_heatmap(rows_by_experiment["e4_separability"], manifests),
             weight_sensitivity_heatmap(rows_by_experiment["e6_weighted"], manifests),
-            confusion_matrix_figure(rows_by_experiment["e2_localization"], manifests),
+            confusion_matrix_figure(
+                rows_by_experiment.get("e2_localization_calibrated")
+                or rows_by_experiment["e2_localization"],
+                manifests,
+            ),
             latency_cost_figure(rows_by_experiment["e5_latency"], manifests),
         ]
         for filename, svg, provenance in figure_payloads:
@@ -275,6 +301,47 @@ def discover_artifacts(
         raise AnalysisError(msg)
 
     return [discovered[name] for name in require_experiments]
+
+
+def discover_optional_artifacts(
+    *,
+    results_dir: Path,
+    mode: str,
+    experiment_ids: Sequence[str],
+    existing_experiment_ids: set[str],
+) -> list[ResultArtifact]:
+    """Discover optional artifacts without making clean-clone smoke analysis fail."""
+
+    optional: list[ResultArtifact] = []
+    for experiment_id in experiment_ids:
+        if experiment_id in existing_experiment_ids:
+            continue
+        manifest_path = (
+            results_dir / experiment_id / f"{experiment_id}_{mode}_manifest.json"
+        )
+        if not manifest_path.exists():
+            continue
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        raw_jsonl = Path(str(manifest.get("raw_jsonl", "")))
+        if not raw_jsonl.is_absolute():
+            raw_jsonl = Path.cwd() / raw_jsonl
+        if not raw_jsonl.exists():
+            msg = (
+                f"Manifest {manifest_path} points to a missing raw result file: "
+                f"{raw_jsonl}"
+            )
+            raise AnalysisError(msg)
+        optional.append(
+            ResultArtifact(
+                experiment_id=experiment_id,
+                mode=str(manifest.get("mode", mode)),
+                raw_jsonl=raw_jsonl,
+                manifest_json=manifest_path,
+                run_id=str(manifest.get("run_id", "")),
+                git_commit=str(manifest.get("git_commit", "")),
+            )
+        )
+    return optional
 
 
 def connect_duckdb(path: Path | None) -> duckdb.DuckDBPyConnection:
@@ -357,14 +424,13 @@ def detection_table(
             _pct(metric["precision"]),
             _pct(metric["recall"]),
             _ci_text(f1_ci.estimate, f1_ci.lower, f1_ci.upper),
-            _short_runs([manifests["e1_detection"].run_id]),
         ]
         table_rows.append(row)
         cells.append(_cell("detection", baseline, "f1", manifests["e1_detection"]))
     provenance = _provenance([manifests["e1_detection"]], cells)
     return (
         "tab_detection.tex",
-        ["Method", "N", "Acc.", "Prec.", "Rec.", "F1 (95\\% CI)", "Run IDs"],
+        ["Method", "N", "Acc.", "Prec.", "Rec.", "F1 (95\\% CI)"],
         table_rows,
         provenance,
     )
@@ -372,6 +438,7 @@ def detection_table(
 
 def localization_table(
     rows: Sequence[Mapping[str, Any]],
+    calibrated_rows: Sequence[Mapping[str, Any]],
     manifests: Mapping[str, ResultArtifact],
     seed: int,
     bootstrap_samples: int,
@@ -380,33 +447,56 @@ def localization_table(
 
     table_rows: list[list[str]] = []
     cells: list[dict[str, str]] = []
-    for group_name, selected in [("All", list(rows)), *_stage_groups(rows)]:
-        ci = accuracy_ci(
-            selected,
-            correct_key="correct",
-            seed=seed,
-            samples=bootstrap_samples,
-        )
-        table_rows.append(
-            [
-                group_name,
-                str(len(selected)),
-                _ci_text(ci.estimate, ci.lower, ci.upper),
-                _short_runs([manifests["e2_localization"].run_id]),
-            ]
-        )
-        cells.append(
-            _cell(
-                "localization",
-                group_name,
-                "accuracy",
-                manifests["e2_localization"],
+    variants = [("Transparent Delta", list(rows), "e2_localization")]
+    if calibrated_rows:
+        grouped_calibrated = _group_rows(calibrated_rows, "localizer_name")
+        for name in sorted(grouped_calibrated):
+            if name == "transparent_global_threshold":
+                continue
+            variants.append(
+                (
+                    _display_name(name),
+                    list(grouped_calibrated[name]),
+                    "e2_localization_calibrated",
+                )
             )
-        )
-    provenance = _provenance([manifests["e2_localization"]], cells)
+    for variant_name, selected_rows, experiment_id in variants:
+        row = [variant_name]
+        for group_name, selected in [
+            ("All", list(selected_rows)),
+            *_stage_groups(selected_rows),
+        ]:
+            ci = accuracy_ci(
+                selected,
+                correct_key="correct",
+                seed=seed,
+                samples=bootstrap_samples,
+            )
+            row.append(_ci_text(ci.estimate, ci.lower, ci.upper))
+            cells.append(
+                _cell(
+                    "localization",
+                    f"{variant_name} / {group_name}",
+                    "accuracy",
+                    manifests[experiment_id],
+                )
+            )
+        table_rows.append([*row, _short_runs([manifests[experiment_id].run_id])])
+    provenance_artifacts = [manifests["e2_localization"]]
+    if calibrated_rows:
+        provenance_artifacts.append(manifests["e2_localization_calibrated"])
+    provenance = _provenance(provenance_artifacts, cells)
     return (
         "tab_localization.tex",
-        ["Expected Stage", "N", "Accuracy (95\\% CI)", "Run IDs"],
+        [
+            "Localizer",
+            "All",
+            "Retrieval",
+            "Prompt",
+            "Generation",
+            "No Fault",
+            "Run IDs",
+        ],
         table_rows,
         provenance,
     )
@@ -438,7 +528,6 @@ def ablation_table(
                 oracle_names,
                 str(len(selected)),
                 _ci_text(ci.estimate, ci.lower, ci.upper),
-                _short_runs([manifests["e3_ablation"].run_id]),
             ]
         )
         cells.append(
@@ -447,7 +536,7 @@ def ablation_table(
     provenance = _provenance([manifests["e3_ablation"]], cells)
     return (
         "tab_oracle_ablation.tex",
-        ["Variant", "Oracles", "N", "Accuracy (95\\% CI)", "Run IDs"],
+        ["Variant", "Oracles", "N", "Accuracy (95\\% CI)"],
         table_rows,
         provenance,
     )
@@ -461,26 +550,35 @@ def mutation_discriminativeness_table(
 ) -> tuple[str, list[str], list[list[str]], dict[str, Any]]:
     """Build a mutation-delta discriminativeness table."""
 
-    flattened = _flatten_operator_deltas(rows)
+    selected_rows = _primary_operator_rows(rows)
+    flattened = _flatten_operator_deltas(selected_rows)
     grouped = _group_rows(flattened, "operator")
     table_rows: list[list[str]] = []
     cells: list[dict[str, str]] = []
     for operator in sorted(grouped):
         selected = grouped[operator]
-        deltas = [float(row["delta"]) for row in selected]
-        ci = bootstrap_ci(
-            deltas,
-            lambda sample: mean(float(value) for value in sample),
-            seed=seed,
-            samples=bootstrap_samples,
+        applied = [row for row in selected if row.get("applied") is not False]
+        deltas = [float(row["delta"]) for row in applied]
+        reject_rate = 1.0 - (len(applied) / len(selected)) if selected else 0.0
+        mean_delta = (
+            "n/a"
+            if not deltas
+            else _ci_text_points(
+                bootstrap_ci(
+                    deltas,
+                    lambda sample: mean(float(value) for value in sample),
+                    seed=seed,
+                    samples=bootstrap_samples,
+                )
+            )
         )
         table_rows.append(
             [
                 operator,
                 MUTATION_STAGES.get(operator, "unknown"),
-                str(len(selected)),
-                _ci_text(ci.estimate, ci.lower, ci.upper),
-                _short_runs([manifests["e4_separability"].run_id]),
+                str(len(applied)),
+                _pct(reject_rate),
+                mean_delta,
             ]
         )
         cells.append(
@@ -494,7 +592,13 @@ def mutation_discriminativeness_table(
     provenance = _provenance([manifests["e4_separability"]], cells)
     return (
         "tab_mutation_discriminativeness.tex",
-        ["Operator", "Stage", "N", "$\\Delta\\Omega$ Mean (95\\% CI)", "Run IDs"],
+        [
+            "Operator",
+            "Stage",
+            "Applied N",
+            "Rejected \\%",
+            "$\\Delta\\Omega$ Mean (95\\% CI)",
+        ],
         table_rows,
         provenance,
     )
@@ -535,7 +639,6 @@ def latency_cost_table(
                 _ci_seconds(latency_ci.estimate, latency_ci.lower, latency_ci.upper),
                 _ci_usd(cost_ci.estimate, cost_ci.lower, cost_ci.upper),
                 _number(overhead, digits=2),
-                _short_runs([manifests["e5_latency"].run_id]),
             ]
         )
         cells.append(
@@ -550,7 +653,6 @@ def latency_cost_table(
             "Latency Sec. (95\\% CI)",
             "Cost USD (95\\% CI)",
             "Overhead",
-            "Run IDs",
         ],
         table_rows,
         provenance,
@@ -583,14 +685,13 @@ def aggregation_table(
                 _display_name(aggregation),
                 str(len(selected)),
                 _ci_text(ci.estimate, ci.lower, ci.upper),
-                _short_runs([manifests["e6_weighted"].run_id]),
             ]
         )
         cells.append(_cell("aggregation", name, "accuracy", manifests["e6_weighted"]))
     provenance = _provenance([manifests["e6_weighted"]], cells)
     return (
         "tab_aggregation.tex",
-        ["Variant", "Aggregator", "N", "Accuracy (95\\% CI)", "Run IDs"],
+        ["Variant", "Aggregator", "N", "Accuracy (95\\% CI)"],
         table_rows,
         provenance,
     )
@@ -625,52 +726,183 @@ def architecture_figure() -> tuple[str, str, dict[str, Any]]:
     """Return a clean architecture SVG source."""
 
     labels = [
-        "RAG Run",
-        "Stage Mutations",
-        "NLI / Semantic / Judge",
-        "Aggregation",
-        "Fault Report",
+        ("RAG", "query, context, answer"),
+        ("Mutate", "retrieval, prompt, generation"),
+        ("Score", "NLI, semantic, judge"),
+        ("Delta", "operator vector"),
+        ("Localize", "gate + calibrated classifier"),
     ]
-    box_x = 72
-    box_width = 220
-    box_height = 44
-    row_gap = 20
-    top = 44
-    boxes = []
-    arrows = []
-    for index, label in enumerate(labels):
-        y = top + index * (box_height + row_gap)
-        boxes.append(
-            f'<rect x="{box_x}" y="{y}" width="{box_width}" '
-            f'height="{box_height}" rx="6" '
-            'fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>'
-        )
-        boxes.append(
-            f'<text x="{box_x + box_width / 2:.1f}" y="{y + 27}" text-anchor="middle" '
-            'font-size="12" font-family="Arial, sans-serif">'
-            f"{html.escape(label)}</text>"
+    box_width = 76
+    gap = 10
+    x0 = 18
+    y = 62
+    parts = [
+        _defs(),
+        '<text x="18" y="28" font-size="17" font-weight="700" '
+        'font-family="Arial, sans-serif">MutOracle-RAG Pipeline</text>',
+    ]
+    for index, (title, subtitle) in enumerate(labels):
+        x = x0 + index * (box_width + gap)
+        parts.extend(
+            [
+                f'<rect x="{x}" y="{y}" width="{box_width}" height="58" rx="6" '
+                'fill="#f8fafc" stroke="#334155" stroke-width="1.2"/>',
+                f'<text x="{x + box_width / 2}" y="{y + 23}" text-anchor="middle" '
+                'font-size="12" font-weight="700" font-family="Arial, sans-serif">'
+                f"{html.escape(title)}</text>",
+                f'<text x="{x + box_width / 2}" y="{y + 42}" text-anchor="middle" '
+                'font-size="8" font-family="Arial, sans-serif">'
+                f"{html.escape(subtitle)}</text>",
+            ]
         )
         if index < len(labels) - 1:
-            mid_x = box_x + box_width / 2
-            start_y = y + box_height
-            end_y = start_y + row_gap - 5
-            arrows.append(
-                f'<path d="M{mid_x:.1f} {start_y} L{mid_x:.1f} {end_y}" '
-                'stroke="#0f766e" stroke-width="1.6" marker-end="url(#arrow)"/>'
+            arrow_x = x + box_width
+            parts.append(
+                f'<path d="M{arrow_x + 2} {y + 29} L{arrow_x + gap - 2} {y + 29}" '
+                'stroke="#0f766e" stroke-width="1.5" marker-end="url(#arrow)"/>'
             )
-    height = top + len(labels) * box_height + (len(labels) - 1) * row_gap + 22
-    svg = _svg(
-        364,
-        height,
-        [
-            _defs(),
-            '<text x="22" y="26" font-size="17" font-weight="700" '
-            'font-family="Arial, sans-serif">MutOracle-RAG Analysis Flow</text>',
-            *boxes,
-            *arrows,
-        ],
-    )
+    svg = _svg(450, 150, parts)
     return "fig_architecture.svg", svg, {"run_ids": [], "source_files": []}
+
+
+def experiment_design_figure() -> tuple[str, str, dict[str, Any]]:
+    """Return an experiment-suite diagram."""
+
+    rows = [
+        ("E1", "Response detection", "RAGAS / MetaRAG / MutOracle"),
+        ("E2", "Stage localization", "Transparent vs calibrated"),
+        ("E3", "Oracle ablation", "NLI, semantic, judge subsets"),
+        ("E4", "Mutation signal", "Applied deltas and rejection rates"),
+        ("E5", "Audit metadata", "latency, tokens, cache, cost"),
+        ("E6", "Aggregation", "uniform, weighted, gated"),
+    ]
+    parts = [
+        '<text x="18" y="28" font-size="17" font-weight="700" '
+        'font-family="Arial, sans-serif">Experiment Suite</text>',
+    ]
+    for index, (eid, title, detail) in enumerate(rows):
+        y = 48 + index * 36
+        fill = "#ecfdf5" if index % 2 == 0 else "#f8fafc"
+        parts.extend(
+            [
+                f'<rect x="18" y="{y}" width="414" height="28" rx="5" '
+                f'fill="{fill}" stroke="#cbd5e1"/>',
+                f'<text x="32" y="{y + 19}" font-size="11" font-weight="700" '
+                'font-family="Arial, sans-serif">'
+                f"{eid}</text>",
+                f'<text x="78" y="{y + 19}" font-size="10" '
+                'font-family="Arial, sans-serif">'
+                f"{html.escape(title)}</text>",
+                f'<text x="230" y="{y + 19}" font-size="9" '
+                'font-family="Arial, sans-serif" fill="#334155">'
+                f"{html.escape(detail)}</text>",
+            ]
+        )
+    return "fig_experiment_design.svg", _svg(450, 285, parts), {
+        "run_ids": [],
+        "source_files": [],
+    }
+
+
+def calibration_flow_figure() -> tuple[str, str, dict[str, Any]]:
+    """Return a validation/test calibration flow diagram."""
+
+    parts = [
+        _defs(),
+        '<text x="18" y="28" font-size="17" font-weight="700" '
+        'font-family="Arial, sans-serif">Validation-Calibrated Localizer</text>',
+    ]
+    boxes = [
+        (20, 58, "FITS validation", "fit gate, scaler, classifier"),
+        (236, 58, "FITS test", "held-out evaluation only"),
+        (20, 142, "Full delta vector", "11 operator deltas"),
+        (236, 142, "Prediction", "retrieval / prompt / generation / no fault"),
+    ]
+    for x, y, title, subtitle in boxes:
+        parts.extend(
+            [
+                f'<rect x="{x}" y="{y}" width="176" height="54" rx="6" '
+                'fill="#f8fafc" stroke="#334155" stroke-width="1.1"/>',
+                f'<text x="{x + 88}" y="{y + 22}" text-anchor="middle" '
+                'font-size="11" font-weight="700" font-family="Arial, sans-serif">'
+                f"{html.escape(title)}</text>",
+                f'<text x="{x + 88}" y="{y + 40}" text-anchor="middle" '
+                'font-size="8" font-family="Arial, sans-serif">'
+                f"{html.escape(subtitle)}</text>",
+            ]
+        )
+    parts.extend(
+        [
+            '<path d="M108 112 L108 136" stroke="#0f766e" stroke-width="1.5" '
+            'marker-end="url(#arrow)"/>',
+            '<path d="M196 169 L230 169" stroke="#0f766e" stroke-width="1.5" '
+            'marker-end="url(#arrow)"/>',
+            '<path d="M324 112 L324 136" stroke="#0f766e" stroke-width="1.5" '
+            'marker-end="url(#arrow)"/>',
+            '<path d="M196 85 C214 85 218 85 230 85" stroke="#64748b" '
+            'stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrow)"/>',
+        ]
+    )
+    return "fig_calibration_flow.svg", _svg(450, 230, parts), {
+        "run_ids": [],
+        "source_files": [],
+    }
+
+
+def localizer_accuracy_figure(
+    rows: Sequence[Mapping[str, Any]],
+    calibrated_rows: Sequence[Mapping[str, Any]],
+    manifests: Mapping[str, ResultArtifact],
+) -> tuple[str, str, dict[str, Any]]:
+    """Return a compact localizer accuracy bar chart."""
+
+    variants: list[tuple[str, Sequence[Mapping[str, Any]], ResultArtifact]] = [
+        ("Transparent", rows, manifests["e2_localization"]),
+    ]
+    grouped = _group_rows(calibrated_rows, "localizer_name")
+    for name in [
+        "no_fault_gated_delta",
+        "stage_threshold_delta",
+        "centroid_full_delta",
+        "logistic_full_delta",
+    ]:
+        if name in grouped:
+            variants.append(
+                (
+                    _display_name(name),
+                    grouped[name],
+                    manifests["e2_localization_calibrated"],
+                )
+            )
+    values = [
+        mean(1.0 if row.get("correct") else 0.0 for row in selected)
+        for _, selected, _ in variants
+    ]
+    max_value = max(values or [1.0]) or 1.0
+    parts = [
+        '<text x="18" y="28" font-size="17" font-weight="700" '
+        'font-family="Arial, sans-serif">Localizer Accuracy</text>',
+    ]
+    for index, ((label, _, _), value) in enumerate(zip(variants, values, strict=True)):
+        y = 52 + index * 34
+        width = 220 * (value / max_value)
+        parts.extend(
+            [
+                f'<text x="18" y="{y + 15}" font-size="9" '
+                'font-family="Arial, sans-serif">'
+                f"{html.escape(label)}</text>",
+                f'<rect x="166" y="{y}" width="{width:.1f}" height="18" rx="3" '
+                'fill="#0f766e"/>',
+                f'<text x="{166 + width + 8:.1f}" y="{y + 14}" font-size="10" '
+                'font-family="Arial, sans-serif">'
+                f"{100 * value:.1f}%</text>",
+            ]
+        )
+    artifacts = [artifact for _, _, artifact in variants]
+    return "fig_localizer_accuracy.svg", _svg(450, 245, parts), _provenance(
+        artifacts,
+        [],
+    )
 
 
 def delta_heatmap(
@@ -679,7 +911,7 @@ def delta_heatmap(
 ) -> tuple[str, str, dict[str, Any]]:
     """Return mutation delta heatmap SVG."""
 
-    flattened = _flatten_operator_deltas(rows)
+    flattened = _flatten_operator_deltas(_primary_operator_rows(rows))
     values: dict[tuple[str, str], float] = {}
     for stage in STAGE_LABELS:
         stage_rows = [row for row in flattened if row.get("expected_stage") == stage]
@@ -688,20 +920,20 @@ def delta_heatmap(
                 float(row["delta"])
                 for row in stage_rows
                 if row.get("operator") == operator
+                and row.get("applied") is not False
             ]
             values[(stage, operator)] = mean(selected)
     svg = _heatmap_svg(
-        title="Mean Delta by Expected Stage and Mutation",
+        title="",
         row_labels=list(STAGE_LABELS),
         col_labels=list(MUTATION_STAGES),
         values=values,
         value_format=lambda value: _number(value, digits=2),
-        cell_size=44,
-        left_margin=108,
-        top_margin=72,
-        title_font_size=18,
-        label_font_size=11,
-        value_font_size=11,
+        cell_size=30,
+        left_margin=78,
+        top_margin=58,
+        label_font_size=8,
+        value_font_size=8,
     )
     artifact = manifests["e4_separability"]
     return "fig_delta_heatmap.svg", svg, _provenance([artifact], [])
@@ -759,19 +991,18 @@ def confusion_matrix_figure(
         for col_index, predicted in enumerate(STAGE_LABELS)
     }
     svg = _heatmap_svg(
-        title="Stage Attribution Confusion Matrix",
+        title="",
         row_labels=list(STAGE_LABELS),
         col_labels=list(STAGE_LABELS),
         values=values,
         value_format=lambda value: str(int(value)),
-        cell_size=56,
-        left_margin=126,
-        top_margin=72,
-        title_font_size=18,
-        label_font_size=11,
-        value_font_size=11,
+        cell_size=38,
+        left_margin=94,
+        top_margin=58,
+        label_font_size=8,
+        value_font_size=8,
     )
-    artifact = manifests["e2_localization"]
+    artifact = manifests.get("e2_localization_calibrated", manifests["e2_localization"])
     return "fig_confusion_matrix.svg", svg, _provenance([artifact], [])
 
 
@@ -919,9 +1150,10 @@ def _ensure_required_experiment_rows(
     ]
     if not missing:
         return
-    available = ", ".join(
-        sorted(name for name, rows in rows_by_experiment.items() if rows)
-    ) or "none"
+    available = (
+        ", ".join(sorted(name for name, rows in rows_by_experiment.items() if rows))
+        or "none"
+    )
     msg = (
         "Imported raw results are missing rows for required experiments: "
         f"{', '.join(missing)}. Available experiment_id values: {available}. "
@@ -967,19 +1199,38 @@ def _flatten_operator_deltas(
         deltas = row.get("operator_deltas", {})
         if not isinstance(deltas, dict):
             continue
+        status = row.get("operator_status", {})
+        status = status if isinstance(status, dict) else {}
         for operator, delta in deltas.items():
             if delta is None:
                 continue
+            operator_status = status.get(operator, {})
+            operator_status = (
+                operator_status if isinstance(operator_status, dict) else {}
+            )
             flattened.append(
                 {
                     "operator": str(operator),
                     "delta": float(delta),
+                    "applied": operator_status.get("applied"),
+                    "rejected": operator_status.get("rejected"),
                     "expected_stage": row.get("expected_stage"),
                     "qid": row.get("qid"),
                     "seed": row.get("seed"),
                 }
             )
     return flattened
+
+
+def _primary_operator_rows(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    """Return all-operator rows when E4 contains operator-drop variants."""
+
+    selected = [
+        row for row in rows if str(row.get("ablation_name", "")) == "all_operators"
+    ]
+    return selected or list(rows)
 
 
 def _joined_unique(rows: Sequence[Mapping[str, Any]], key: str) -> str:
@@ -1027,8 +1278,12 @@ def _display_name(value: str) -> str:
         "cs": "CS",
         "qp": "QP",
         "qn": "QN",
+        "qd": "QD",
+        "qi": "QI",
         "fs": "FS",
         "fa": "FA",
+        "fe": "FE",
+        "gn": "GN",
         "no_fault": "No Fault",
         "no_fault_detected": "No Fault Detected",
     }
@@ -1066,6 +1321,13 @@ def _number(value: float, *, digits: int = 3) -> str:
 
 def _ci_text(estimate: float, lower: float, upper: float) -> str:
     return f"{_pct(estimate)} [{_pct(lower)}, {_pct(upper)}]"
+
+
+def _ci_text_points(ci: Any) -> str:
+    estimate = _number(float(ci.estimate), digits=1)
+    lower = _number(float(ci.lower), digits=1)
+    upper = _number(float(ci.upper), digits=1)
+    return f"{estimate} [{lower}, {upper}]"
 
 
 def _ci_seconds(estimate: float, lower: float, upper: float) -> str:
@@ -1141,14 +1403,18 @@ def _heatmap_svg(
     width = left + cell * len(col_labels) + 22
     height = top + cell * len(row_labels) + 28
     max_value = max([abs(value) for value in values.values()] + [1e-9])
-    parts = [
-        f'<text x="18" y="28" font-size="{title_font_size}" font-weight="700" '
-        f'font-family="Arial, sans-serif">{html.escape(title)}</text>'
-    ]
+    parts = []
+    if title:
+        parts.append(
+            f'<text x="18" y="28" font-size="{title_font_size}" '
+            'font-weight="700" font-family="Arial, sans-serif">'
+            f"{html.escape(title)}</text>"
+        )
+    col_label_y = max(18, top - 14)
     for col_index, label in enumerate(col_labels):
         x = left + col_index * cell + cell / 2
         parts.append(
-            f'<text x="{x:.1f}" y="53" text-anchor="middle" '
+            f'<text x="{x:.1f}" y="{col_label_y}" text-anchor="middle" '
             f'font-size="{label_font_size}" '
             'font-family="Arial, sans-serif">'
             f"{html.escape(_axis_label(label))}</text>"

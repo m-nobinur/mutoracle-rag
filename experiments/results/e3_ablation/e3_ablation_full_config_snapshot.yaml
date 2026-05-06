@@ -1,0 +1,64 @@
+experiment:
+  id: e3_ablation
+  title: "E3 oracle ablation study"
+  output_dir: experiments/results/e3_ablation
+
+dataset:
+  path: data/rgb/rgb_v1.0.0/rgb_phase8.jsonl
+  split: test
+
+smoke:
+  query_limit: 5
+  seeds: [13, 42, 91]
+
+dev:
+  query_limit: 20
+  seeds: [13]
+
+full:
+  query_limit: 240
+  seeds: [13, 42, 91]
+
+cost_gate:
+  estimated_cost_per_example_usd: 0.0
+  max_estimated_cost_usd: 0.5
+  require_smoke_before_full: true
+
+ablation:
+  oracle_mode: real
+  runtime_config: experiments/configs/phase8_real.yaml
+  variants:
+    - name: nli_only
+      oracles: [nli]
+      aggregation: weighted
+      weights:
+        nli: 1.0
+      delta_threshold: 0.05
+    - name: semantic_only
+      oracles: [semantic_similarity]
+      aggregation: weighted
+      weights:
+        semantic_similarity: 1.0
+      delta_threshold: 0.05
+    - name: judge_only
+      oracles: [llm_judge]
+      aggregation: weighted
+      weights:
+        llm_judge: 1.0
+      delta_threshold: 0.05
+    - name: all_oracles_uniform
+      oracles: [nli, semantic_similarity, llm_judge]
+      aggregation: uniform
+      delta_threshold: 0.05
+    - name: leave_one_out_no_nli
+      oracles: [semantic_similarity, llm_judge]
+      aggregation: uniform
+      delta_threshold: 0.05
+    - name: leave_one_out_no_semantic
+      oracles: [nli, llm_judge]
+      aggregation: uniform
+      delta_threshold: 0.05
+    - name: leave_one_out_no_judge
+      oracles: [nli, semantic_similarity]
+      aggregation: uniform
+      delta_threshold: 0.05

@@ -1,0 +1,48 @@
+{
+  "models": [
+    {
+      "method": "transparent_global_threshold",
+      "name": "transparent_global_threshold"
+    },
+    {
+      "method": "no_fault_gated_delta",
+      "name": "no_fault_gated_delta"
+    },
+    {
+      "method": "stage_threshold_delta",
+      "name": "stage_threshold_delta",
+      "stage_thresholds": {
+        "generation": 0.470833,
+        "prompt": 0.0,
+        "retrieval": 0.470833
+      }
+    },
+    {
+      "method": "zscored_nearest_centroid",
+      "name": "centroid_full_delta"
+    },
+    {
+      "method": "multinomial_logistic_delta",
+      "name": "logistic_full_delta"
+    }
+  ],
+  "no_fault_gate": {
+    "max_delta_threshold": 0.1,
+    "min_positive_operators": 1,
+    "total_positive_threshold": 0.0
+  },
+  "operators": [
+    "CI",
+    "CR",
+    "CS",
+    "QP",
+    "QN",
+    "QD",
+    "QI",
+    "FS",
+    "FA",
+    "FE",
+    "GN"
+  ],
+  "validation_rows": 180
+}

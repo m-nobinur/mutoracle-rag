@@ -1,10 +1,10 @@
 experiment:
-  id: e2_localization
-  title: "E2 FITS fault-attribution accuracy"
-  output_dir: experiments/results/e2_localization
+  id: e5_latency
+  title: "E5 cost and latency reporting"
+  output_dir: experiments/results/e5_latency
 
 dataset:
-  path: data/fits/fits_v1.0.0/fits.jsonl
+  path: data/rgb/rgb_v1.0.0/rgb_phase8.jsonl
   split: test
 
 smoke:
@@ -24,12 +24,13 @@ cost_gate:
   max_estimated_cost_usd: 0.5
   require_smoke_before_full: true
 
-localizer:
+latency:
+  oracle_mode: real
+  runtime_config: experiments/configs/phase8_real.yaml
   aggregation: weighted
   weights:
     nli: 0.4
     semantic_similarity: 0.3
     llm_judge: 0.3
   delta_threshold: 0.05
-  oracles: [nli, semantic_similarity, llm_judge]
-  work_units_per_record: 12
+  work_units_per_record: 2
