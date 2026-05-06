@@ -240,8 +240,7 @@ class LogisticDeltaCalibrator:
         vectors = [_with_bias(_zscore(vector, means, stdevs)) for vector in raw_vectors]
         labels = [str(row["expected_stage"]) for row in rows]
         weights = {
-            label: [0.0 for _ in range(len(resolved_operators) + 1)]
-            for label in LABELS
+            label: [0.0 for _ in range(len(resolved_operators) + 1)] for label in LABELS
         }
 
         scale = 1.0 / len(vectors)
@@ -252,10 +251,7 @@ class LogisticDeltaCalibrator:
             }
             for vector, gold_label in zip(vectors, labels, strict=True):
                 probabilities = _softmax(
-                    {
-                        label: _dot(weights[label], vector)
-                        for label in LABELS
-                    }
+                    {label: _dot(weights[label], vector) for label in LABELS}
                 )
                 for label in LABELS:
                     target = 1.0 if label == gold_label else 0.0

@@ -245,9 +245,7 @@ def _write_summary(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
             selected = (
                 localizer_rows
                 if group == "all"
-                else [
-                    row for row in localizer_rows if row["expected_stage"] == group
-                ]
+                else [row for row in localizer_rows if row["expected_stage"] == group]
             )
             total = len(selected)
             correct = sum(1 for row in selected if row["correct"] is True)
@@ -312,9 +310,7 @@ def _write_manifest(
         "status": "complete",
         "metadata": {
             "script": "experiments/run_calibrated_localization.py",
-            "methods": sorted(
-                {str(row["localizer_name"]) for row in calibrated_rows}
-            ),
+            "methods": sorted({str(row["localizer_name"]) for row in calibrated_rows}),
             "training_split": "fits_validation",
             "test_source": "e2_localization_full_raw",
             "uses_test_labels_for_calibration": False,

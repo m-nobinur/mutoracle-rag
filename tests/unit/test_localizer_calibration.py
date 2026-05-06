@@ -48,10 +48,13 @@ def test_no_fault_gate_uses_all_explicit_conditions() -> None:
     )
 
     assert gate.rejects_fault({"A": 0.2}, {"retrieval": 0.2}) is True
-    assert gate.rejects_fault(
-        {"A": 0.2, "B": 0.2},
-        {"retrieval": 0.2, "prompt": 0.2},
-    ) is False
+    assert (
+        gate.rejects_fault(
+            {"A": 0.2, "B": 0.2},
+            {"retrieval": 0.2, "prompt": 0.2},
+        )
+        is False
+    )
     assert gate.metadata()["min_positive_operators"] == 2
 
 
