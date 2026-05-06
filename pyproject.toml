@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = { text = "MIT" }
 authors = [
-  { name = "MutOracle-RAG Contributors" },
+  { name = "M Nobinur" },
 ]
 keywords = ["rag", "mutation-testing", "hallucination", "fault-localization"]
 classifiers = [
