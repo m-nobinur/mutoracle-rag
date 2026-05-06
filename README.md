@@ -1,28 +1,33 @@
 # MutOracle-RAG
 
 MutOracle-RAG is a Python research package for mutation-driven, stage-aware fault
-localization in RAG pipelines. The committed design lock is in
-[`docs/final-plan.md`](docs/final-plan.md), the phase index is in
-[`docs/PHASE_PLAN.md`](docs/PHASE_PLAN.md), and completion is tracked in
-[`docs/PHASE_STATUS.md`](docs/PHASE_STATUS.md).
+localization in RAG pipelines. The canonical master plan is in
+[`dev-plan-source/final-plan.md`](dev-plan-source/final-plan.md), and the
+maintained documentation index is [`docs/README.md`](docs/README.md).
 
 ## Current Status
 
-Phases 1 through 9 are in place:
+The end-to-end research artifact is complete and validated locally:
 
 - repository bootstrap, typed contracts, config loading, CLI, and quality gates
 - reproducible fixture RAG system under test with OpenRouter generator support
-- seven canonical mutation operators: CI, CR, CS, QP, QN, FS, and FA
+- eleven canonical mutation operators: CI, CR, CS, QP, QN, QD, QI, FS, FA,
+  FE, and GN
 - NLI, semantic-similarity, and LLM-as-judge oracle modules
 - uniform, weighted, and confidence-gated aggregation strategies
 - mutation-delta fault localization with calibrated `FaultReport` output
-- deterministic Phase 6 data manifests and FITS v1.0.0 build/validation path
-- Phase 7 RAGAS and MetaRAG baseline harnesses with shared result schemas
-- Phase 8 E1-E6 experiment scripts, configs, smoke artifacts, and manifests
-- Phase 9 DuckDB-backed analysis scripts with generated paper tables, figures,
-  and run-ID traceability
+- deterministic data manifests and FITS v1.0.0 build/validation path
+- RAGAS and MetaRAG-style baseline harnesses with shared result schemas
+- E1-E6 experiment scripts, configs, smoke/full artifacts, and manifests
+- DuckDB-backed analysis scripts with generated local analysis assets and
+  run-ID traceability
+- reproduction docs, API notes, and `mutoracle release-check`
 - shared SQLite response cache, oracle-score cache, cost ledger, and metadata
 - credential-free `smoke`, `mutate`, `diagnose`, and `data build` CLI paths
+
+Full E1-E6 artifacts have been generated. Remaining release operations are
+repository/tag governance tasks: final tag, GitHub release publication, and
+optional FITS archival packaging.
 
 ## Quickstart
 
@@ -36,6 +41,7 @@ uv run mutoracle mutate --operator CI
 uv run mutoracle diagnose
 uv run mutoracle data build
 uv run mutoracle baseline smoke --help
+uv run mutoracle release-check
 uv run pytest
 ```
 
@@ -58,9 +64,12 @@ uv run mutoracle config show
 uv run mutoracle config validate
 ```
 
-The current development config uses `openai/gpt-5-nano` as the Phase 2 generator
-and `minimax/minimax-m2.5` as the judge model. Local oracle model names are also
-configured in `experiments/configs/dev.yaml`.
+The current development config uses `openai/gpt-5-nano` as the generator and
+`minimax/minimax-m2.5` as the judge model. Full-result runs use
+`experiments/configs/phase8_real.yaml`, currently `morph/morph-v3-fast` for the
+generator and `google/gemini-3.1-flash-lite-preview` for the judge. See
+[`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) for the full model and cost
+notes.
 
 Install local model dependencies only when running real NLI or semantic oracle
 inference:
@@ -70,7 +79,7 @@ uv sync --extra oracles --dev
 ```
 
 Aggregation weights and the localizer delta threshold are configured under the
-`aggregation` section. The Phase 5 calibrated config is generated with:
+`aggregation` section. The calibrated config is generated with:
 
 ```bash
 uv run python experiments/run_weight_search.py --seed 2026
@@ -81,13 +90,13 @@ decision rule and report schema.
 
 ## Baselines
 
-Phase 7 adds response-level baseline comparison outputs for RAGAS and the local
+The project includes response-level baseline comparison outputs for RAGAS and the local
 MetaRAG approximation. The RAGAS adapter records faithfulness, answer relevancy,
 context precision, and context recall when the official package is installed.
 The shared runner writes JSONL records with stable `run_id`, normalized score,
-threshold, predicted label, latency, cost, model IDs, and per-metric details.
+threshold, predicted label, latency, model IDs, and per-metric details.
 Rows also include metadata breakdowns that separate generation overhead from
-baseline evaluator overhead for Phase 8 analysis.
+baseline evaluator overhead for analysis.
 
 ```bash
 uv run mutoracle baseline smoke --baseline metarag --queries 2
@@ -102,9 +111,9 @@ MetaRAG deviations and threshold-calibration rule.
 
 ## Experiments and Analysis
 
-Phase 8 experiment commands are documented in
-[`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md). Phase 9 analysis assets regenerate
-from saved result artifacts:
+Experiment commands are documented in
+[`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md). Analysis assets regenerate from
+saved result artifacts:
 
 ```bash
 make experiment-smoke
@@ -115,17 +124,28 @@ uv run python experiments/analyze_results.py --mode full
 ```
 
 The analysis script imports raw JSONL into DuckDB, computes deterministic
-bootstrap confidence intervals, writes LaTeX tables under `paper/tables/`, SVG
-figures under `paper/figures/`, and records provenance in
-`paper/TRACEABILITY.md`. Use `dev` mode for small development runs with progress
-logging; `paper/TRACEABILITY.md` records whether the current assets came from
-smoke, dev, or full artifacts. The localizer batches baseline and mutation
-oracle inputs, and repeated runs still reuse the SQLite oracle cache. Final
-paper claims should be regenerated with full-run artifacts.
+bootstrap confidence intervals, writes local-only tables/figures/traceability,
+and records run provenance. Use `dev` mode for small development runs with
+progress logging. The localizer batches baseline and mutation oracle inputs,
+and repeated runs still reuse the SQLite oracle cache.
+
+## Release
+
+Release artifacts and guides:
+
+- reproduction guide: [`docs/REPRODUCING.md`](docs/REPRODUCING.md)
+- API reference: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md)
+
+Run the public-readiness check:
+
+```bash
+uv run mutoracle release-check
+```
 
 ## Data and FITS
 
-Phase 6 builds source manifests and a deterministic FITS fault-injection split:
+The data command builds source manifests and a deterministic FITS
+fault-injection split:
 
 ```bash
 uv run mutoracle data build
@@ -160,4 +180,5 @@ make install
 make lint
 make test
 make smoke
+make release-check
 ```
