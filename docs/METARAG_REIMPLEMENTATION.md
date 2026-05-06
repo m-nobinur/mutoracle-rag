@@ -1,9 +1,9 @@
 # MetaRAG Reimplementation Notes
 
-Phase 7 implements a transparent MetaRAG-style approximation for baseline
-comparison. The implementation is intentionally limited to the parts needed for
-the MutOracle-RAG experiments: response-level hallucination detection on the
-same `RAGRun` objects used by the localizer.
+The project includes a transparent MetaRAG-style approximation for baseline
+comparison. It is intentionally limited to the parts needed by MutOracle-RAG:
+response-level hallucination detection on the same `RAGRun` objects used by the
+localizer.
 
 ## Implemented Path
 
@@ -31,13 +31,7 @@ The output schema is shared with RAGAS and includes:
 - `baseline_name`;
 - normalized `score`;
 - threshold and predicted response-level label;
-- latency, cost, model IDs, per-metric scores, and metadata.
-
-Latency and cost fields include shared generation metadata, and the metadata
-payload stores `latency_breakdown_seconds` and `cost_breakdown_usd` so Phase 8
-scripts can separate generator vs. baseline overhead consistently.
-Current records mark `cost_scope=generation_only` because baseline-evaluator
-token costs are not yet metered through a shared usage ledger.
+- latency, model IDs, per-metric scores, and metadata.
 
 ## Deviations
 
@@ -65,14 +59,14 @@ Baseline thresholds must be selected with validation examples only. The helper
 `tune_threshold_validation_only` rejects non-validation split records and
 optimizes hallucination-label F1 over candidate faithfulness thresholds.
 
-The test split must not be used for threshold selection. Phase 8 experiment
-scripts should load validation baseline scores first, persist the selected
-thresholds, and then evaluate the frozen thresholds on the test split.
+The test split must not be used for threshold selection. Experiment scripts
+should load validation baseline scores first, persist the selected thresholds,
+and then evaluate the frozen thresholds on the test split.
 
 ## RAGAS Compatibility
 
 The RAGAS wrapper uses the official package through an adapter in
-`src/mutoracle/baselines/ragas_baseline.py`. It records the Phase 7 metric set:
-faithfulness, answer relevancy, context precision, and context recall. The
-headline detector still follows the master plan rule:
+`src/mutoracle/baselines/ragas_baseline.py`. It records faithfulness, answer
+relevancy, context precision, and context recall. The headline detector follows
+the master-plan rule:
 `hallucinated if faithfulness < tau_ragas`.

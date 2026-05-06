@@ -1,7 +1,7 @@
 # FITS Dataset
 
-FITS is the Phase 6 fault-injection test split for MutOracle-RAG. It is designed
-for stage-aware localization evaluation with single-stage labels:
+FITS is the fault-injection test split for MutOracle-RAG. It is designed for
+stage-aware localization evaluation with single-stage labels:
 `retrieval`, `prompt`, `generation`, and `no_fault`.
 
 Build locally:
@@ -59,7 +59,7 @@ The validator enforces:
 - query-length distribution alignment against source queries
 - immutable frozen artifact behavior for `fits_v1.0.0` unless `--force` is used
 
-The Phase 6 implementation uses deterministic schema-compatible local fixtures
-so the build works without network credentials. The manifest preserves the
-intended RGB, TriviaQA, and Wikipedia source identities for replacement with
-staged raw downloads in later experiment runs.
+The implementation uses deterministic schema-compatible local fixtures so the
+build works without network credentials. The manifest preserves the intended
+RGB, TriviaQA, and Wikipedia source identities for audit and future replacement
+with staged raw downloads.
