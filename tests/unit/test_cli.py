@@ -128,6 +128,33 @@ def test_cli_diagnose_reports_runtime_errors(monkeypatch) -> None:
     assert "Diagnose error" in result.output
 
 
+def test_cli_release_check_reports_current_release_state() -> None:
+    result = CliRunner().invoke(app, ["release-check"])
+
+    assert result.exit_code in {0, 2}
+    assert '"traceability_mode"' in result.output
+    assert '"full_results_mode"' in result.output
+    assert '"missing_required_files"' in result.output
+
+
+def test_release_check_strict_full_results_fails_on_missing_full_manifests(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    for relative in cli_module.RELEASE_REQUIRED_PATHS:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("placeholder", encoding="utf-8")
+    (tmp_path / ".gitignore").write_text(".env\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["release-check", "--strict-full-results"])
+
+    assert result.exit_code == 2
+    assert '"full_results_mode": "missing"' in result.output
+    assert "Full E1-E6 result manifests are incomplete" in result.output
+
+
 def test_cli_baseline_smoke_writes_jsonl_and_manifest(tmp_path: Path) -> None:
     output_path = tmp_path / "baseline-smoke.jsonl"
     result = CliRunner().invoke(
@@ -145,7 +172,7 @@ def test_cli_baseline_smoke_writes_jsonl_and_manifest(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 0
-    assert "Phase 7 baselines" in result.output
+    assert "Baseline comparison" in result.output
     assert output_path.exists()
     manifest_path = output_path.with_suffix(".manifest.json")
     assert manifest_path.exists()
