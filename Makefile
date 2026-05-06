@@ -81,4 +81,9 @@ release-check-full:
 paper-pdf:
 	@command -v latexmk >/dev/null 2>&1 || { echo "latexmk is not installed. Install MacTeX or TinyTeX to build paper/main.tex locally."; exit 2; }
 	@command -v inkscape >/dev/null 2>&1 || { echo "inkscape is not installed. Install Inkscape to enable SVG figure conversion for paper/main.tex."; exit 2; }
+	@mkdir -p paper/svg-inkscape
+	@for svg in paper/figures/*.svg; do \
+		base=$$(basename "$$svg" .svg); \
+		inkscape "$$svg" --export-type=pdf --export-filename="paper/svg-inkscape/$${base}_svg-raw.pdf" >/dev/null 2>&1; \
+	done
 	$(UV) run latexmk -g -cd -pdf -shell-escape -interaction=nonstopmode paper/main.tex

@@ -1,13 +1,9 @@
 # Reproducing MutOracle-RAG
 
-This guide provides a clean-clone workflow for:
+This guide covers the shortest path from a clean clone to smoke validation,
+development runs, and a full artifact freeze.
 
-- environment setup;
-- credential-free smoke validation;
-- development runs;
-- full artifact regeneration.
-
-## Prerequisites
+## Requirements
 
 Required:
 
@@ -17,10 +13,10 @@ Required:
 
 Optional:
 
-- OpenRouter API key for live generation and LLM judge calls
-- Local oracle dependencies for sentence-transformer and NLI model inference
+- `OPENROUTER_API_KEY` for live generation and LLM judge calls
+- local oracle dependencies for sentence-transformer and NLI inference
 
-## 1) Clean Clone Setup
+## 1. Clean Clone Setup
 
 ```bash
 git clone <repo-url> mutoracle-rag
@@ -30,12 +26,12 @@ uv run mutoracle --help
 uv run mutoracle config validate
 ```
 
-The default smoke path is credential-free. Do not commit `.env`; it is ignored
-by the repository.
+The default smoke path is credential-free. Keep secrets in `.env`; do not
+commit that file.
 
-## 2) Credential-Free Smoke Reproduction
+## 2. Smoke Reproduction
 
-Run the quality gate and core smoke commands:
+Run the core quality gate:
 
 ```bash
 make check
@@ -45,7 +41,7 @@ uv run mutoracle mutate --operator CI
 uv run mutoracle diagnose
 ```
 
-Run smoke experiment scripts and regenerate smoke analysis assets:
+Then regenerate smoke experiment and analysis outputs:
 
 ```bash
 make experiment-smoke
@@ -53,23 +49,20 @@ make analysis-smoke
 uv run pytest tests/unit/test_analysis_assets.py --no-cov
 ```
 
-Expected result: tests pass, E1-E6 smoke outputs are regenerated under
-`experiments/results/`, and local analysis assets are regenerated under
-`.local/analysis-assets/` with smoke provenance.
+Expected result: tests pass, E1-E6 smoke outputs are refreshed under
+`experiments/results/`, and smoke analysis assets are refreshed under
+`.local/analysis-assets/`.
 
-## 3) Development-Scale Reproduction
+## 3. Development-Scale Runs
 
 ```bash
 make experiment-dev
 make analysis-dev
 ```
 
-Development artifacts are intentionally separate from final full artifacts.
-They are useful for inspecting runtime behavior before final release checks.
+Dev artifacts are intentionally separate from final full artifacts.
 
-## 4) Full Artifact Freeze
-
-Regenerate full artifacts and enforce strict full-result checks:
+## 4. Full Artifact Freeze
 
 ```bash
 make experiment-full
@@ -78,11 +71,9 @@ make analysis
 uv run mutoracle release-check --strict-full-results
 ```
 
-The strict release check passes when full E1-E6 manifests exist.
+The strict release check passes when the full E1-E6 manifests exist.
 
-## 5) Optional Live Model Setup
-
-Create a local `.env` file:
+## 5. Optional Live Model Setup
 
 ```bash
 OPENROUTER_API_KEY=your-key-here
@@ -94,12 +85,11 @@ Install local oracle dependencies only when needed:
 uv sync --extra oracles --dev
 ```
 
-The SQLite cache and usage ledger are stored under the configured runtime cache
-path. Repeated calls reuse cached completions and oracle scores when the prompt,
-model, provider route, temperature, and seed match.
+The configured SQLite cache reuses completions and oracle scores when the
+prompt, model, provider route, temperature, and seed match.
 
-## Reproduction Notes
+## Notes
 
-- Full runs may require local model downloads or longer runtime.
+- Full runs may require local model downloads and longer runtime.
 - FITS v1.0.0 JSONL files are frozen build artifacts and are ignored by default
   to avoid large generated data churn.
