@@ -1,6 +1,6 @@
 [project]
 name = "mutoracle-rag"
-version = "0.1.0"
+version = "0.1.1"
 description = "Mutation-driven, stage-aware fault localization for RAG pipelines."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"

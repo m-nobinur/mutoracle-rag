@@ -722,128 +722,339 @@ def write_latex_table(
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def architecture_figure() -> tuple[str, str, dict[str, Any]]:
-    """Return a clean architecture SVG source."""
+FIG_FONT = "Arial, sans-serif"
+FIG_TEXT = "#0f172a"
+FIG_MUTED = "#475569"
+FIG_LINE = "#64748b"
+FIG_ACCENT = "#0f766e"
+FIG_ACCENT_2 = "#2563eb"
+FIG_PANEL = "#f8fafc"
+FIG_ACCENT_PANEL = "#ecfdf5"
+FIG_BLUE_PANEL = "#eff6ff"
 
-    labels = [
-        ("RAG", "query, context, answer"),
-        ("Mutate", "retrieval, prompt, generation"),
-        ("Score", "NLI, semantic, judge"),
-        ("Delta", "operator vector"),
-        ("Localize", "gate + calibrated classifier"),
-    ]
-    box_width = 76
-    gap = 10
-    x0 = 18
-    y = 62
+
+def architecture_figure() -> tuple[str, str, dict[str, Any]]:
+    """Return a compact architecture SVG for one-column IEEE rendering."""
+
+    def box(
+        *,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        title: str,
+        detail: str = "",
+        fill: str = FIG_PANEL,
+        stroke: str = FIG_LINE,
+        title_color: str = FIG_TEXT,
+        detail_color: str = FIG_MUTED,
+        rx: int = 4,
+    ) -> list[str]:
+        parts = [
+            f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="{rx}" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="1.2"/>',
+            f'<text x="{x + width / 2}" y="{y + 18}" text-anchor="middle" '
+            f'font-size="10" font-weight="700" font-family="{FIG_FONT}" '
+            f'fill="{title_color}">{html.escape(title)}</text>',
+        ]
+        if detail:
+            parts.append(
+                f'<text x="{x + width / 2}" y="{y + 35}" text-anchor="middle" '
+                f'font-size="8.5" font-family="{FIG_FONT}" fill="{detail_color}">'
+                f"{detail}</text>"
+            )
+        return parts
+
+    def label(x: int, y: int, text: str) -> str:
+        return (
+            f'<text x="{x}" y="{y}" font-size="8.5" font-weight="700" '
+            f'font-family="{FIG_FONT}" fill="{FIG_MUTED}">'
+            f"{html.escape(text)}</text>"
+        )
+
+    def arrow(path: str, *, color: str = FIG_ACCENT) -> str:
+        return (
+            f'<path d="{path}" fill="none" stroke="{color}" stroke-width="1.4" '
+            'marker-end="url(#arrow)"/>'
+        )
+
     parts = [
         _defs(),
-        '<text x="18" y="28" font-size="17" font-weight="700" '
-        'font-family="Arial, sans-serif">MutOracle-RAG Pipeline</text>',
+        '<rect x="0" y="0" width="430" height="302" fill="#ffffff"/>',
+        f'<text x="215" y="24" text-anchor="middle" font-size="14" '
+        f'font-weight="700" font-family="{FIG_FONT}" fill="{FIG_TEXT}">'
+        "MutOracle-RAG Architecture</text>",
+        label(18, 50, "RAG RUN"),
     ]
-    for index, (title, subtitle) in enumerate(labels):
-        x = x0 + index * (box_width + gap)
+
+    rag_boxes = [
+        (18, "Query", "q", FIG_PANEL, FIG_LINE, FIG_TEXT),
+        (120, "Retriever", "context C", FIG_BLUE_PANEL, FIG_ACCENT_2, FIG_TEXT),
+        (222, "Prompt", "q + C", "#f8fafc", FIG_LINE, FIG_TEXT),
+        (324, "Generator", "answer a", FIG_BLUE_PANEL, FIG_ACCENT_2, FIG_TEXT),
+    ]
+    for index, (x, title, detail, fill, stroke, color) in enumerate(rag_boxes):
         parts.extend(
-            [
-                f'<rect x="{x}" y="{y}" width="{box_width}" height="58" rx="6" '
-                'fill="#f8fafc" stroke="#334155" stroke-width="1.2"/>',
-                f'<text x="{x + box_width / 2}" y="{y + 23}" text-anchor="middle" '
-                'font-size="12" font-weight="700" font-family="Arial, sans-serif">'
-                f"{html.escape(title)}</text>",
-                f'<text x="{x + box_width / 2}" y="{y + 42}" text-anchor="middle" '
-                'font-size="8" font-family="Arial, sans-serif">'
-                f"{html.escape(subtitle)}</text>",
-            ]
-        )
-        if index < len(labels) - 1:
-            arrow_x = x + box_width
-            parts.append(
-                f'<path d="M{arrow_x + 2} {y + 29} L{arrow_x + gap - 2} {y + 29}" '
-                'stroke="#0f766e" stroke-width="1.5" marker-end="url(#arrow)"/>'
+            box(
+                x=x,
+                y=60,
+                width=88,
+                height=42,
+                title=title,
+                detail=detail,
+                fill=fill,
+                stroke=stroke,
+                title_color=color,
+                detail_color=color,
             )
-    svg = _svg(450, 150, parts)
+        )
+        if index < len(rag_boxes) - 1:
+            parts.append(arrow(f"M{x + 90} 81 L{x + 100} 81", color=FIG_LINE))
+
+    parts.extend(
+        [
+            arrow("M368 104 L368 120 L215 120 L215 136", color=FIG_LINE),
+            f'<text x="280" y="117" font-size="8.5" font-family="{FIG_FONT}" '
+            f'fill="{FIG_MUTED}">baseline R0 = (q, C, a, m)</text>',
+            label(18, 132, "DIAGNOSTIC PROBES"),
+        ]
+    )
+    parts.extend(
+        box(
+            x=150,
+            y=142,
+            width=130,
+            height=38,
+            title="Stage Mutations",
+            detail="11 operators",
+            fill=FIG_PANEL,
+            stroke=FIG_LINE,
+        )
+    )
+    mutation_boxes = [
+        (18, "Retrieval", "CI CR CS"),
+        (150, "Prompt", "QP QN QD QI"),
+        (282, "Generation", "FS FA FE GN"),
+    ]
+    parts.extend(
+        [
+            f'<path d="M215 182 L215 194 M215 194 L64 194 M215 194 L366 194" '
+            f'fill="none" stroke="{FIG_ACCENT}" stroke-width="1.4"/>',
+            arrow("M64 194 L64 207"),
+            arrow("M215 194 L215 207"),
+            arrow("M366 194 L366 207"),
+        ]
+    )
+    for x, title, detail in mutation_boxes:
+        parts.extend(
+            box(
+                x=x,
+                y=210,
+                width=112,
+                height=42,
+                title=title,
+                detail=detail,
+                fill=FIG_ACCENT_PANEL,
+                stroke=FIG_ACCENT,
+            )
+        )
+
+    parts.extend(
+        [
+            f'<path d="M64 254 L64 266 M215 254 L215 266 M366 254 L366 266 '
+            f'M64 266 L366 266" fill="none" stroke="{FIG_ACCENT}" '
+            'stroke-width="1.4"/>',
+            arrow("M215 266 L215 278"),
+            f'<rect x="80" y="280" width="270" height="20" rx="4" '
+            f'fill="{FIG_TEXT}" stroke="{FIG_TEXT}" stroke-width="1"/>',
+            f'<text x="215" y="294" text-anchor="middle" font-size="9" '
+            f'font-weight="700" font-family="{FIG_FONT}" fill="#ffffff">'
+            "oracles -> aggregate score -> calibrated stage</text>",
+        ]
+    )
+    svg = _svg(430, 302, parts)
     return "fig_architecture.svg", svg, {"run_ids": [], "source_files": []}
 
 
 def experiment_design_figure() -> tuple[str, str, dict[str, Any]]:
-    """Return an experiment-suite diagram."""
+    """Return a compact experiment-suite diagram."""
 
-    rows = [
-        ("E1", "Response detection", "RAGAS / MetaRAG / MutOracle"),
-        ("E2", "Stage localization", "Transparent vs calibrated"),
-        ("E3", "Oracle ablation", "NLI, semantic, judge subsets"),
-        ("E4", "Mutation signal", "Applied deltas and rejection rates"),
-        ("E5", "Audit metadata", "latency, tokens, cache, cost"),
-        ("E6", "Aggregation", "uniform, weighted, gated"),
-    ]
+    def node(
+        x: int,
+        y: int,
+        eid: str,
+        title: str,
+        detail: str,
+        *,
+        main_claim: bool,
+    ) -> list[str]:
+        fill = FIG_BLUE_PANEL if main_claim else FIG_PANEL
+        stroke = FIG_ACCENT_2 if main_claim else FIG_LINE
+        dash = "" if main_claim else ' stroke-dasharray="4 3"'
+        return [
+            f'<rect x="{x}" y="{y}" width="128" height="50" rx="4" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="1.2"{dash}/>',
+            f'<text x="{x + 10}" y="{y + 18}" font-size="9.5" font-weight="700" '
+            f'font-family="{FIG_FONT}" fill="{FIG_TEXT}">'
+            f"{eid}</text>",
+            f'<text x="{x + 36}" y="{y + 18}" font-size="9" font-weight="700" '
+            f'font-family="{FIG_FONT}" fill="{FIG_TEXT}">'
+            f"{html.escape(title)}</text>",
+            f'<text x="{x + 64}" y="{y + 36}" text-anchor="middle" font-size="8" '
+            f'font-family="{FIG_FONT}" fill="{FIG_MUTED}">'
+            f"{html.escape(detail)}</text>",
+        ]
+
     parts = [
-        '<text x="18" y="28" font-size="17" font-weight="700" '
-        'font-family="Arial, sans-serif">Experiment Suite</text>',
+        _defs(),
+        f'<text x="215" y="24" text-anchor="middle" font-size="14" '
+        f'font-weight="700" font-family="{FIG_FONT}" fill="{FIG_TEXT}">'
+        "Experiment Suite</text>",
+        f'<rect x="142" y="42" width="146" height="32" rx="4" '
+        f'fill="{FIG_TEXT}" stroke="{FIG_TEXT}" stroke-width="1"/>',
+        f'<text x="215" y="63" text-anchor="middle" font-size="10" '
+        f'font-weight="700" font-family="{FIG_FONT}" fill="#ffffff">'
+        "MutOracle-RAG evaluation</text>",
+        f'<path d="M215 76 L215 92 M215 176 L215 190" fill="none" '
+        f'stroke="{FIG_LINE}" stroke-width="1.1"/>',
     ]
-    for index, (eid, title, detail) in enumerate(rows):
-        y = 48 + index * 36
-        fill = "#ecfdf5" if index % 2 == 0 else "#f8fafc"
-        parts.extend(
-            [
-                f'<rect x="18" y="{y}" width="414" height="28" rx="5" '
-                f'fill="{fill}" stroke="#cbd5e1"/>',
-                f'<text x="32" y="{y + 19}" font-size="11" font-weight="700" '
-                'font-family="Arial, sans-serif">'
-                f"{eid}</text>",
-                f'<text x="78" y="{y + 19}" font-size="10" '
-                'font-family="Arial, sans-serif">'
-                f"{html.escape(title)}</text>",
-                f'<text x="230" y="{y + 19}" font-size="9" '
-                'font-family="Arial, sans-serif" fill="#334155">'
-                f"{html.escape(detail)}</text>",
-            ]
-        )
-    return "fig_experiment_design.svg", _svg(450, 285, parts), {
+    for args in [
+        (14, 94, "E1", "Detection", "RAGAS / MetaRAG", True),
+        (151, 94, "E2", "Localization", "transparent vs calibrated", True),
+        (288, 94, "E3", "Oracle Ablation", "NLI / semantic / judge", False),
+        (14, 190, "E4", "Mutation Signal", "deltas / rejection", True),
+        (151, 190, "E5", "Runtime Audit", "latency / tokens / cost", False),
+        (288, 190, "E6", "Aggregation", "uniform / weighted / gated", False),
+    ]:
+        x, y, eid, title, detail, main_claim = args
+        parts.extend(node(x, y, eid, title, detail, main_claim=main_claim))
+    parts.extend(
+        [
+            f'<rect x="104" y="264" width="12" height="7" fill="{FIG_BLUE_PANEL}" '
+            f'stroke="{FIG_ACCENT_2}" stroke-width="1"/>',
+            f'<text x="122" y="271" font-size="8" font-family="{FIG_FONT}" '
+            f'fill="{FIG_MUTED}">main claim</text>',
+            f'<rect x="214" y="264" width="12" height="7" fill="{FIG_PANEL}" '
+            f'stroke="{FIG_LINE}" stroke-width="1" stroke-dasharray="4 3"/>',
+            f'<text x="232" y="271" font-size="8" font-family="{FIG_FONT}" '
+            f'fill="{FIG_MUTED}">audit / sensitivity</text>',
+        ]
+    )
+    return "fig_experiment_design.svg", _svg(430, 282, parts), {
         "run_ids": [],
         "source_files": [],
     }
 
 
 def calibration_flow_figure() -> tuple[str, str, dict[str, Any]]:
-    """Return a validation/test calibration flow diagram."""
+    """Return a compact validation/test calibration flow diagram."""
+
+    def box(
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        title: str,
+        detail: str,
+        *,
+        fill: str = FIG_PANEL,
+        stroke: str = FIG_LINE,
+    ) -> list[str]:
+        return [
+            f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="4" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="1.1"/>',
+            f'<text x="{x + width / 2}" y="{y + 19}" text-anchor="middle" '
+            f'font-size="9.5" font-weight="700" font-family="{FIG_FONT}" '
+            f'fill="{FIG_TEXT}">'
+            f"{html.escape(title)}</text>",
+            f'<text x="{x + width / 2}" y="{y + 35}" text-anchor="middle" '
+            f'font-size="8" font-family="{FIG_FONT}" fill="{FIG_MUTED}">'
+            f"{detail}</text>",
+        ]
 
     parts = [
         _defs(),
-        '<text x="18" y="28" font-size="17" font-weight="700" '
-        'font-family="Arial, sans-serif">Validation-Calibrated Localizer</text>',
+        f'<text x="215" y="24" text-anchor="middle" font-size="14" '
+        f'font-weight="700" font-family="{FIG_FONT}" fill="{FIG_TEXT}">'
+        "Validation-Calibrated Localizer</text>",
     ]
-    boxes = [
-        (20, 58, "FITS validation", "fit gate, scaler, classifier"),
-        (236, 58, "FITS test", "held-out evaluation only"),
-        (20, 142, "Full delta vector", "11 operator deltas"),
-        (236, 142, "Prediction", "retrieval / prompt / generation / no fault"),
-    ]
-    for x, y, title, subtitle in boxes:
-        parts.extend(
-            [
-                f'<rect x="{x}" y="{y}" width="176" height="54" rx="6" '
-                'fill="#f8fafc" stroke="#334155" stroke-width="1.1"/>',
-                f'<text x="{x + 88}" y="{y + 22}" text-anchor="middle" '
-                'font-size="11" font-weight="700" font-family="Arial, sans-serif">'
-                f"{html.escape(title)}</text>",
-                f'<text x="{x + 88}" y="{y + 40}" text-anchor="middle" '
-                'font-size="8" font-family="Arial, sans-serif">'
-                f"{html.escape(subtitle)}</text>",
-            ]
+    parts.extend(
+        box(
+            18,
+            46,
+            118,
+            48,
+            "Validation",
+            "fit scaler + model",
+            fill=FIG_BLUE_PANEL,
+            stroke=FIG_ACCENT_2,
         )
+    )
+    parts.extend(
+        box(
+            294,
+            46,
+            118,
+            48,
+            "FITS Test",
+            "held-out labels",
+            fill=FIG_PANEL,
+            stroke=FIG_LINE,
+        )
+    )
+    parts.extend(
+        box(
+            18,
+            126,
+            118,
+            48,
+            "Delta Vector",
+            "11 operator scores",
+        )
+    )
     parts.extend(
         [
-            '<path d="M108 112 L108 136" stroke="#0f766e" stroke-width="1.5" '
+            f'<path d="M77 96 L77 120" stroke="{FIG_ACCENT}" stroke-width="1.4" '
             'marker-end="url(#arrow)"/>',
-            '<path d="M196 169 L230 169" stroke="#0f766e" stroke-width="1.5" '
+            f'<path d="M136 150 L158 150" stroke="{FIG_ACCENT}" stroke-width="1.4" '
             'marker-end="url(#arrow)"/>',
-            '<path d="M324 112 L324 136" stroke="#0f766e" stroke-width="1.5" '
+            f'<rect x="160" y="126" width="110" height="48" rx="4" '
+            f'fill="{FIG_ACCENT_PANEL}" stroke="{FIG_ACCENT}" stroke-width="1.1"/>',
+            f'<text x="215" y="145" text-anchor="middle" font-size="9.5" '
+            f'font-weight="700" font-family="{FIG_FONT}" fill="{FIG_TEXT}">'
+            "Gate + Scale</text>",
+            f'<text x="215" y="161" text-anchor="middle" font-size="8" '
+            f'font-family="{FIG_FONT}" fill="{FIG_MUTED}">validation only</text>',
+            f'<path d="M270 150 L292 150" stroke="{FIG_ACCENT}" stroke-width="1.4" '
             'marker-end="url(#arrow)"/>',
-            '<path d="M196 85 C214 85 218 85 230 85" stroke="#64748b" '
-            'stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrow)"/>',
         ]
     )
-    return "fig_calibration_flow.svg", _svg(450, 230, parts), {
+    parts.extend(
+        box(
+            294,
+            126,
+            118,
+            48,
+            "Predict Stage",
+            "retrieval / prompt / gen.",
+        )
+    )
+    parts.extend(
+        [
+            f'<path d="M353 96 L353 120" stroke="{FIG_LINE}" stroke-width="1.1" '
+            'stroke-dasharray="4 3" marker-end="url(#arrow)"/>',
+            f'<text x="366" y="114" font-size="8" font-family="{FIG_FONT}" '
+            f'fill="{FIG_MUTED}">evaluation only</text>',
+            f'<rect x="160" y="202" width="110" height="34" rx="4" '
+            f'fill="{FIG_BLUE_PANEL}" stroke="{FIG_ACCENT_2}" stroke-width="1.1"/>',
+            f'<text x="215" y="223" text-anchor="middle" font-size="9" '
+            f'font-weight="700" font-family="{FIG_FONT}" fill="{FIG_TEXT}">'
+            "90.0% logistic</text>",
+            f'<path d="M353 176 L353 219 L274 219" stroke="{FIG_ACCENT}" '
+            'stroke-width="1.4" marker-end="url(#arrow)"/>',
+        ]
+    )
+    return "fig_calibration_flow.svg", _svg(430, 252, parts), {
         "run_ids": [],
         "source_files": [],
     }
@@ -891,13 +1102,24 @@ def localizer_accuracy_figure(
                 f'<text x="18" y="{y + 15}" font-size="9" '
                 'font-family="Arial, sans-serif">'
                 f"{html.escape(label)}</text>",
+                '<rect x="166" y="{y}" width="220" height="18" rx="3" '
+                'fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.6"/>'.format(y=y),
                 f'<rect x="166" y="{y}" width="{width:.1f}" height="18" rx="3" '
-                'fill="#0f766e"/>',
+                f'fill="{"#2563eb" if value >= 0.7 else "#94a3b8"}"/>',
                 f'<text x="{166 + width + 8:.1f}" y="{y + 14}" font-size="10" '
                 'font-family="Arial, sans-serif">'
                 f"{100 * value:.1f}%</text>",
             ]
         )
+    target_x = 166 + 220 * (0.7 / max_value)
+    parts.extend(
+        [
+            f'<path d="M{target_x:.1f} 46 L{target_x:.1f} 224" '
+            'stroke="#d97706" stroke-width="1.1" stroke-dasharray="4 3"/>',
+            f'<text x="{target_x + 4:.1f}" y="238" font-size="8" '
+            'font-family="Arial, sans-serif" fill="#92400e">70% target</text>',
+        ]
+    )
     artifacts = [artifact for _, _, artifact in variants]
     return "fig_localizer_accuracy.svg", _svg(450, 245, parts), _provenance(
         artifacts,
