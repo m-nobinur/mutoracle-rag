@@ -133,6 +133,9 @@ def test_generated_figures_fit_column_width_and_have_legible_text(
         width_match = re.search(r'width="([0-9]+(?:\\.[0-9]+)?)"', svg)
         assert width_match is not None
         assert float(width_match.group(1)) <= 450.0
+        height_match = re.search(r'height="([0-9]+(?:\\.[0-9]+)?)"', svg)
+        assert height_match is not None
+        assert float(height_match.group(1)) <= 320.0
 
         font_sizes = [
             float(match.group(1))
@@ -140,6 +143,10 @@ def test_generated_figures_fit_column_width_and_have_legible_text(
         ]
         assert font_sizes
         assert min(font_sizes) >= 8.0
+
+        text_elements = re.findall(r"<text\\b[^>]*>", svg)
+        assert text_elements
+        assert all('font-family="Arial, sans-serif"' in tag for tag in text_elements)
 
 
 def _write_phase_nine_fixture_results(results_dir: Path) -> None:
