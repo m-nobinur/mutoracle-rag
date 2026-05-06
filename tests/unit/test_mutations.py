@@ -32,10 +32,22 @@ def _fixture_run(
 
 
 def test_registry_exposes_canonical_operator_ids_by_stage() -> None:
-    assert list_operator_ids() == ["CI", "CR", "CS", "QP", "QN", "FS", "FA"]
+    assert list_operator_ids() == [
+        "CI",
+        "CR",
+        "CS",
+        "QP",
+        "QN",
+        "QD",
+        "QI",
+        "FS",
+        "FA",
+        "FE",
+        "GN",
+    ]
     assert set(operators_by_stage("retrieval")) == {"CI", "CR", "CS"}
-    assert set(operators_by_stage("prompt")) == {"QP", "QN"}
-    assert set(operators_by_stage("generation")) == {"FS", "FA"}
+    assert set(operators_by_stage("prompt")) == {"QP", "QN", "QD", "QI"}
+    assert set(operators_by_stage("generation")) == {"FS", "FA", "FE", "GN"}
 
 
 def test_all_operators_preserve_rag_run_schema_and_are_deterministic() -> None:
@@ -108,3 +120,20 @@ def test_generation_operators_only_mutate_supported_factoid_spans() -> None:
     assert synonym.metadata["mutation"]["rejected"] is False
     assert antonym.answer != supported.answer
     assert antonym.metadata["mutation"]["rejected"] is False
+
+
+def test_richer_prompt_and_generation_mutations_cover_factoid_queries() -> None:
+    run = _fixture_run(
+        query="Who founded SpaceX in 2002?",
+        answer="Elon Musk founded SpaceX.",
+    )
+
+    detail_drop = get_operator("QD").apply(run, rng=Random(1))
+    instruction = get_operator("QI").apply(run, rng=Random(1))
+    entity_swap = get_operator("FE").apply(run, rng=Random(1))
+    negation = get_operator("GN").apply(run, rng=Random(1))
+
+    assert detail_drop.query == "Who founded SpaceX?"
+    assert instruction.query.endswith("explicitly supported by context.")
+    assert "Jeff Bezos" in entity_swap.answer
+    assert "not" in negation.answer.lower() or negation.answer.startswith("Not ")

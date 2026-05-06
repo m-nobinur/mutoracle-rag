@@ -15,6 +15,10 @@ QUESTION_WORDS = {"how", "what", "when", "where", "why", "which", "who"}
 DO_AUXILIARIES = {"do", "does", "did", "can", "could", "should", "would", "will"}
 BE_AUXILIARIES = {"is", "are", "was", "were", "has", "have", "had"}
 AUXILIARIES = DO_AUXILIARIES | BE_AUXILIARIES
+TRAILING_MODIFIER = re.compile(
+    r"\s+(?:in|during|on|for|from|about|under|with)\s+[^?.,;:]+(?=\??$)",
+    flags=re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -92,6 +96,80 @@ class QueryNegationMutation:
         )
 
 
+@dataclass(frozen=True)
+class QueryDetailDropMutation:
+    """Drop a trailing query constraint while preserving the core intent."""
+
+    name: str = "Query Detail Drop"
+    stage: Stage = "prompt"
+    operator_id: str = "QD"
+    minimum_similarity: float = 0.45
+
+    def apply(self, run: RAGRun, *, rng: Random) -> RAGRun:
+        del rng
+        candidate = _drop_trailing_detail(run.query)
+        if candidate is None:
+            return clone_run(
+                run,
+                operator_id=self.operator_id,
+                operator_name=self.name,
+                stage=self.stage,
+                rejected=True,
+                rejection_reason="no removable trailing detail found",
+            )
+        similarity = content_similarity(run.query, candidate)
+        if similarity < self.minimum_similarity:
+            return clone_run(
+                run,
+                operator_id=self.operator_id,
+                operator_name=self.name,
+                stage=self.stage,
+                rejected=True,
+                rejection_reason="detail-drop failed content-similarity gate",
+                details={"candidate": candidate, "similarity": similarity},
+            )
+        return clone_run(
+            run,
+            query=candidate,
+            operator_id=self.operator_id,
+            operator_name=self.name,
+            stage=self.stage,
+            details={"original_query": run.query, "similarity": similarity},
+        )
+
+
+@dataclass(frozen=True)
+class QueryInstructionInjectionMutation:
+    """Inject a prompt instruction that stresses intent preservation."""
+
+    name: str = "Query Instruction Injection"
+    stage: Stage = "prompt"
+    operator_id: str = "QI"
+    instruction: str = "Answer only with evidence explicitly supported by context."
+
+    def apply(self, run: RAGRun, *, rng: Random) -> RAGRun:
+        del rng
+        stripped = run.query.strip()
+        if not stripped:
+            return clone_run(
+                run,
+                operator_id=self.operator_id,
+                operator_name=self.name,
+                stage=self.stage,
+                rejected=True,
+                rejection_reason="empty query cannot receive an instruction",
+            )
+        candidate = f"{stripped} {self.instruction}"
+        return clone_run(
+            run,
+            query=candidate,
+            operator_id=self.operator_id,
+            operator_name=self.name,
+            stage=self.stage,
+            details={"original_query": run.query, "instruction": self.instruction},
+        )
+
+
 def _paraphrase(query: str) -> str | None:
     stripped = QUESTION_PUNCTUATION.sub("", query.strip())
     lowered = stripped.lower()
@@ -136,6 +214,20 @@ def _negate(query: str) -> str | None:
 
     negated = [*tokens[:insert_index], "not", *tokens[insert_index:]]
     return _join_tokens(negated)
+
+
+def _drop_trailing_detail(query: str) -> str | None:
+    stripped = query.strip()
+    match = None
+    for candidate in TRAILING_MODIFIER.finditer(stripped):
+        match = candidate
+    if match is None or match.start() <= 0:
+        return None
+    prefix = stripped[: match.start()].rstrip()
+    if len(TOKEN_OR_PUNCTUATION.findall(prefix)) < 3:
+        return None
+    punctuation = "?" if stripped.endswith("?") else ""
+    return f"{QUESTION_PUNCTUATION.sub('', prefix)}{punctuation}"
 
 
 def _next_word_index(tokens: list[str], start: int) -> int | None:

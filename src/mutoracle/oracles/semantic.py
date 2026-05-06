@@ -70,27 +70,56 @@ class SemanticSimilarityOracle(CacheBackedOracle):
         self._backend = backend or SentenceTransformerBackend(self.model_name)
 
     def _score_uncached(self, run: RAGRun, *, input_hash: str) -> OracleScore:
-        context = context_text(run)
-        if not context or not run.answer.strip():
-            return OracleScore(
-                oracle_name=self.name,
-                value=0.0,
-                metadata={
-                    "input_hash": input_hash,
-                    "model": self.model_name,
-                    "reason": "empty_context_or_answer",
-                },
-            )
+        return self._score_uncached_many([run], input_hashes=[input_hash])[0]
 
-        context_vector, answer_vector = self._backend.encode([context, run.answer])
-        raw_cosine = cosine_similarity(list(context_vector), list(answer_vector))
-        score = cosine_to_unit_interval(raw_cosine)
-        return OracleScore(
-            oracle_name=self.name,
-            value=score,
-            metadata={
-                "input_hash": input_hash,
-                "model": self.model_name,
-                "raw_cosine": raw_cosine,
-            },
-        )
+    def _score_uncached_many(
+        self,
+        runs: Sequence[RAGRun],
+        *,
+        input_hashes: Sequence[str],
+    ) -> list[OracleScore]:
+        prepared: list[tuple[str, str, str] | None] = []
+        texts: list[str] = []
+        for run, input_hash in zip(runs, input_hashes, strict=True):
+            context = context_text(run)
+            answer = run.answer.strip()
+            if not context or not answer:
+                prepared.append(None)
+                continue
+            prepared.append((input_hash, context, answer))
+            texts.extend([context, answer])
+
+        vectors = list(self._backend.encode(texts)) if texts else []
+        vector_index = 0
+        results: list[OracleScore] = []
+        for item, input_hash in zip(prepared, input_hashes, strict=True):
+            if item is None:
+                results.append(
+                    OracleScore(
+                        oracle_name=self.name,
+                        value=0.0,
+                        metadata={
+                            "input_hash": input_hash,
+                            "model": self.model_name,
+                            "reason": "empty_context_or_answer",
+                        },
+                    )
+                )
+                continue
+            context_vector = vectors[vector_index]
+            answer_vector = vectors[vector_index + 1]
+            vector_index += 2
+            raw_cosine = cosine_similarity(list(context_vector), list(answer_vector))
+            score = cosine_to_unit_interval(raw_cosine)
+            results.append(
+                OracleScore(
+                    oracle_name=self.name,
+                    value=score,
+                    metadata={
+                        "input_hash": item[0],
+                        "model": self.model_name,
+                        "raw_cosine": raw_cosine,
+                    },
+                )
+            )
+        return results

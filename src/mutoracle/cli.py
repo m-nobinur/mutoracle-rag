@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from importlib import resources
 from pathlib import Path
 from random import Random
@@ -41,10 +42,10 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 config_app = typer.Typer(help="Inspect and validate MutOracle-RAG configuration.")
-rag_app = typer.Typer(help="Run the reproducible Phase 2 RAG system under test.")
-data_app = typer.Typer(help="Build Phase 6 data manifests and FITS artifacts.")
+rag_app = typer.Typer(help="Run the reproducible RAG system under test.")
+data_app = typer.Typer(help="Build data manifests and FITS artifacts.")
 fits_app = typer.Typer(help="Build and validate the FITS fault-injection split.")
-baseline_app = typer.Typer(help="Run Phase 7 response-level baselines.")
+baseline_app = typer.Typer(help="Run response-level baselines.")
 app.add_typer(config_app, name="config")
 app.add_typer(rag_app, name="rag")
 app.add_typer(data_app, name="data")
@@ -52,6 +53,47 @@ app.add_typer(fits_app, name="fits")
 app.add_typer(baseline_app, name="baseline")
 
 console = Console()
+
+RELEASE_REQUIRED_PATHS = (
+    Path("LICENSE"),
+    Path("README.md"),
+    Path("Makefile"),
+    Path("pyproject.toml"),
+    Path("experiments/configs/e1_detection.yaml"),
+    Path("experiments/configs/e2_localization.yaml"),
+    Path("experiments/configs/e3_ablation.yaml"),
+    Path("experiments/configs/e4_separability.yaml"),
+    Path("experiments/configs/e5_latency.yaml"),
+    Path("experiments/configs/e6_weighted.yaml"),
+    Path("data/manifests/datasets.json"),
+    Path("data/fits/manifest.json"),
+)
+FULL_RESULTS_REQUIRED_MANIFESTS = (
+    Path("experiments/results/e1_detection/e1_detection_full_manifest.json"),
+    Path("experiments/results/e2_localization/e2_localization_full_manifest.json"),
+    Path("experiments/results/e3_ablation/e3_ablation_full_manifest.json"),
+    Path("experiments/results/e4_separability/e4_separability_full_manifest.json"),
+    Path("experiments/results/e5_latency/e5_latency_full_manifest.json"),
+    Path("experiments/results/e6_weighted/e6_weighted_full_manifest.json"),
+)
+SECRET_PATTERNS = (
+    re.compile(r"OPENROUTER_API_KEY\s*=\s*(?!your-|<|$)[^\s]+", re.IGNORECASE),
+    re.compile(r"sk-or-v1-[A-Za-z0-9_-]{20,}"),
+    re.compile(r"hf_[A-Za-z0-9]{20,}"),
+)
+SECRET_SCAN_EXCLUDED_DIRS = {
+    ".git",
+    ".venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    "htmlcov",
+    "dist",
+    "build",
+}
+SECRET_SCAN_EXCLUDED_SUFFIXES = {".duckdb", ".pyc", ".png", ".jpg", ".jpeg", ".pdf"}
+SECRET_SCAN_EXCLUDED_NAMES = {".env"}
 
 
 def _version_callback(value: bool) -> None:
@@ -143,6 +185,24 @@ def smoke(
             queries=_default_smoke_queries(limit=queries),
             remote=False,
         )
+
+
+@app.command("release-check")
+def release_check(
+    strict_full_results: Annotated[
+        bool,
+        typer.Option(
+            "--strict-full-results",
+            help="Fail unless full E1-E6 result manifests exist.",
+        ),
+    ] = False,
+) -> None:
+    """Check that release materials are present and public-ready."""
+
+    report = _release_check_report(strict_full_results=strict_full_results)
+    console.print_json(data=report)
+    if report["status"] == "fail":
+        raise typer.Exit(code=2)
 
 
 @app.command()
@@ -280,7 +340,7 @@ def data_build(
         ),
     ] = False,
 ) -> None:
-    """Build Phase 6 manifests plus FITS validation/test JSONL files."""
+    """Build manifests plus FITS validation/test JSONL files."""
 
     _print_data_build(
         output_root=output_root,
@@ -406,7 +466,7 @@ def baseline_smoke(
             f"Baseline smoke passed\nRuns: {manifest.run_count}\n"
             f"Baselines: {', '.join(manifest.baseline_names)}\n"
             f"Output: {output}",
-            title="Phase 7 baselines",
+            title="Baseline comparison",
         )
     )
     console.print_json(data=manifest.model_dump(mode="json"))
@@ -526,7 +586,7 @@ def _print_data_build(
     console.print(
         Panel.fit(
             f"FITS build passed\nSeed: {seed}\nManifest: {paths['manifest']}",
-            title="Phase 6 data",
+            title="Data build",
         )
     )
     console.print_json(data={name: str(path) for name, path in paths.items()})
@@ -608,3 +668,78 @@ def _real_oracles(
         SemanticSimilarityOracle(config=config, ledger=ledger),
         LLMJudgeOracle(config=config, ledger=ledger),
     ]
+
+
+def _release_check_report(*, strict_full_results: bool) -> dict[str, Any]:
+    missing = [str(path) for path in RELEASE_REQUIRED_PATHS if not path.exists()]
+    missing_full_results = [
+        str(path) for path in FULL_RESULTS_REQUIRED_MANIFESTS if not path.exists()
+    ]
+    warnings: list[str] = []
+    failures: list[str] = []
+    if missing:
+        failures.append("Missing required release files.")
+
+    gitignore = Path(".gitignore")
+    gitignore_text = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+    for required_pattern in (".env",):
+        if required_pattern not in gitignore_text:
+            failures.append(f".gitignore does not protect {required_pattern}.")
+
+    full_results_mode = "complete" if not missing_full_results else "missing"
+    if missing_full_results:
+        message = (
+            "Full E1-E6 result manifests are incomplete; run `make experiment-full` "
+            "to regenerate missing artifacts."
+        )
+        if strict_full_results:
+            failures.append(message)
+        else:
+            warnings.append(message)
+
+    secret_hits = _scan_for_obvious_secrets(Path("."))
+    if secret_hits:
+        failures.append("Potential secrets found in public files.")
+
+    status = "fail" if failures else "pass"
+    return {
+        "status": status,
+        "strict_full_results": strict_full_results,
+        "traceability_mode": "local-only",
+        "full_results_mode": full_results_mode,
+        "missing_required_files": missing,
+        "missing_full_result_manifests": missing_full_results,
+        "warnings": warnings,
+        "failures": failures,
+        "secret_hits": secret_hits,
+    }
+
+
+def _scan_for_obvious_secrets(root: Path) -> list[dict[str, str]]:
+    hits: list[dict[str, str]] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or _is_secret_scan_excluded(path):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            for pattern in SECRET_PATTERNS:
+                if pattern.search(line):
+                    hits.append(
+                        {
+                            "file": str(path),
+                            "line": str(line_number),
+                            "pattern": pattern.pattern,
+                        }
+                    )
+    return hits
+
+
+def _is_secret_scan_excluded(path: Path) -> bool:
+    if path.name in SECRET_SCAN_EXCLUDED_NAMES:
+        return True
+    if path.suffix.lower() in SECRET_SCAN_EXCLUDED_SUFFIXES:
+        return True
+    return bool(set(path.parts) & SECRET_SCAN_EXCLUDED_DIRS)

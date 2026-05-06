@@ -1,0 +1,68 @@
+{
+  "config_snapshot_yaml": "experiments/results/e1_detection/e1_detection_full_config_snapshot.yaml",
+  "cost_cap_usd": 0.5,
+  "dataset_checksum": "e80370334a593590abeaa5935dc30ba72962e45579f068940c42a0eef02327fd",
+  "dataset_path": "data/rgb/rgb_v1.0.0/rgb_phase8.jsonl",
+  "duckdb_sql": "experiments/results/e1_detection/e1_detection_full_duckdb.sql",
+  "estimated_cost_usd": 0.0,
+  "experiment_id": "e1_detection",
+  "failure_count": 0,
+  "failures_jsonl": "experiments/results/e1_detection/e1_detection_full_failures.jsonl",
+  "git_commit": "67ccb83375c09dc704589663a97918107c2f822c",
+  "latency_seconds": 3.336507,
+  "metadata": {
+    "baseline_names": [
+      "ragas",
+      "metarag",
+      "mutoracle_weighted"
+    ],
+    "script": "experiments/run_baselines.py",
+    "thresholds": {
+      "metarag": 0.5,
+      "mutoracle_weighted": 0.5,
+      "ragas": 0.5
+    }
+  },
+  "mode": "full",
+  "model_ids": [
+    "fixture-rgb-generator",
+    "fixture-ragas-judge",
+    "fixture-lexical-nli",
+    "fixture-fits-generator",
+    "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+    "sentence-transformers/all-mpnet-base-v2",
+    "google/gemini-3.1-flash-lite-preview"
+  ],
+  "openrouter_daily_usd_cap": null,
+  "provider_routing": [
+    "fixture",
+    "openrouter"
+  ],
+  "query_limit": 240,
+  "raw_jsonl": "experiments/results/e1_detection/e1_detection_full_raw.jsonl",
+  "row_count": 2160,
+  "run_id": "67b48a71102dbae1",
+  "sdk_versions": {
+    "mutoracle-rag": "0.1.0",
+    "openai": "2.33.0",
+    "pydantic": "2.13.3",
+    "python": "3.12.13",
+    "pyyaml": "6.0.3",
+    "typer": "0.25.1"
+  },
+  "seeds": [
+    13,
+    42,
+    91
+  ],
+  "split": "test",
+  "status": "complete",
+  "summary_csv": "experiments/results/e1_detection/e1_detection_full_summary.csv",
+  "title": "E1 response-level detection comparison",
+  "token_counts": {
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0
+  },
+  "written_at": "2026-05-06T08:03:58.687722+00:00"
+}

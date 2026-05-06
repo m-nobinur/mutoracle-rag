@@ -61,4 +61,5 @@ class FaultReport:
     confidence: float
     deltas: dict[str, float]
     stage_deltas: dict[Stage, float]
+    operator_status: dict[str, dict[str, Any]] = field(default_factory=dict)
     evidence: list[str] = field(default_factory=list)

@@ -1,6 +1,6 @@
 # Oracle Layer
 
-Phase 4 adds three normalized faithfulness signals for `RAGRun` objects:
+MutOracle-RAG uses three normalized faithfulness signals for `RAGRun` objects:
 
 | Oracle | Module | Score meaning |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ and returns `0.0` so downstream aggregation can continue deterministically.
   can still hide contradictions.
 - The NLI oracle depends on the chosen checkpoint and context length behavior.
   Long contexts should be chunked or calibrated in later phases.
-- The LLM judge is the only remote/paid oracle path and must remain behind the
-  SQLite cache and cost budget.
+- The LLM judge is the only remote oracle path and should be used with the
+  SQLite cache enabled.
 - Provider-backed tests must use the `provider` pytest marker and are skipped by
   the default test command.

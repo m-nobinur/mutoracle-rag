@@ -20,7 +20,9 @@ from mutoracle.experiments import (
     fixture_oracles,
     load_experiment_config,
     load_runtime_config,
+    override_run_settings,
     print_cost_estimate,
+    print_progress,
     provider_route_for_oracles,
     rag_run_from_fits_record,
     real_model_ids,
@@ -45,6 +47,11 @@ def main() -> None:
         args.config,
         mode=args.mode,
         default_experiment_id="e5_latency",
+    )
+    settings = override_run_settings(
+        settings,
+        query_limit=args.query_limit,
+        seeds=args.seeds,
     )
     raw_config = load_experiment_config(args.config)
     latency_config = _section(raw_config, "latency")
@@ -101,6 +108,14 @@ def main() -> None:
 
     rows: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
+    total = len(settings.seeds) * len(records)
+    completed = 0
+    run_started = timed_seconds()
+    print(
+        f"Running {settings.experiment_id} mode={settings.mode} "
+        f"records={len(records)} seeds={settings.seeds} total_examples={total}",
+        flush=True,
+    )
     for seed in settings.seeds:
         for record in records:
             try:
@@ -209,6 +224,15 @@ def main() -> None:
                         "error_type": type(error).__name__,
                     }
                 )
+            finally:
+                completed += 1
+                print_progress(
+                    label=f"{settings.experiment_id} progress",
+                    completed=completed,
+                    total=total,
+                    started_at=run_started,
+                    every=args.progress_every,
+                )
 
     row_count = write_jsonl(rows, paths.raw_jsonl)
     failure_count = write_jsonl(failures, paths.failures_jsonl)
@@ -235,12 +259,31 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("experiments/configs/e5_latency.yaml"),
     )
-    parser.add_argument("--mode", choices=["smoke", "full"], default="smoke")
+    parser.add_argument("--mode", choices=["smoke", "dev", "full"], default="smoke")
     parser.add_argument(
         "--smoke", action="store_true", help="Shortcut for --mode smoke."
     )
     parser.add_argument("--confirm-cost", action="store_true")
     parser.add_argument("--confirmed-smoke", action="store_true")
+    parser.add_argument(
+        "--query-limit",
+        type=int,
+        default=None,
+        help="Override the configured query limit for this run.",
+    )
+    parser.add_argument(
+        "--seeds",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Override configured seeds for this run.",
+    )
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        default=25,
+        help="Print progress every N examples.",
+    )
     args = parser.parse_args()
     if args.smoke:
         args.mode = "smoke"

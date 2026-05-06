@@ -1,0 +1,9 @@
+accuracy,baseline_name,correct,examples,experiment_id,seed
+0.675,metarag,486,720,e1_detection,
+0.748611,mutoracle_weighted,539,720,e1_detection,
+0.75,ragas,540,720,e1_detection,
+0.724537,all,1565,2160,e1_detection,
+0.725,,522,720,e1_detection,13
+0.725,,522,720,e1_detection,42
+0.723611,,521,720,e1_detection,91
+0.724537,,1565,2160,e1_detection,all
