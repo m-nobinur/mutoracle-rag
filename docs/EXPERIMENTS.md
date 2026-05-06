@@ -1,9 +1,7 @@
-# Phase 8 Experiment Workflow
+# Experiments
 
-Canonical protocol: [EXPERIMENT_PROTOCOL.md](EXPERIMENT_PROTOCOL.md).
-
-Phase 8 experiments run from YAML configs under `experiments/configs/`. Scripts
-write a consistent artifact set beside each result file:
+Experiments run from YAML configs under `experiments/configs/`. Each script
+writes the same artifact bundle beside its raw result file:
 
 - raw JSONL records;
 - summary CSV;
@@ -11,7 +9,14 @@ write a consistent artifact set beside each result file:
 - run manifest JSON;
 - failure JSONL with per-example reasons.
 
-## Smoke Commands
+Do not run experiments from notebooks, and do not type metrics manually.
+Analysis assets are generated from saved artifacts by
+`experiments/analyze_results.py`.
+
+Use smoke mode to check plumbing, dev mode while changing code, and full mode
+only when freezing release-facing artifacts.
+
+## Smoke
 
 ```bash
 uv run python experiments/run_baselines.py --experiment-config experiments/configs/e1_detection.yaml --mode smoke
@@ -22,12 +27,10 @@ uv run python experiments/run_latency.py --config experiments/configs/e5_latency
 uv run python experiments/run_ablation.py --config experiments/configs/e6_weighted.yaml --mode smoke
 ```
 
-Each config records seeds `13`, `42`, and `91`. Full mode is blocked until a
-smoke manifest exists, unless the operator explicitly passes
-`--confirmed-smoke`. Estimated costs are checked before work starts; runs above
-the configured cap require `--confirm-cost`.
+Smoke mode is credential-free where possible and is the right first command
+after a clean clone.
 
-For day-to-day development, use the smaller `dev` mode instead of `full`:
+## Development
 
 ```bash
 make experiment-dev
@@ -35,22 +38,20 @@ make analysis-dev
 ```
 
 `dev` mode writes separate `*_dev_*` artifacts, uses 20 queries and seed `13`,
-and prints progress updates while each script is running. `full` mode remains
-the paper-facing configuration and should be run only when freezing final
-results for the paper.
+and prints progress updates while each script is running.
 
-The localizer batches the baseline and mutation oracle inputs within each
-diagnosis. NLI and semantic-similarity backends use their batch APIs for
-uncached scores, while the SQLite cache still handles repeated runs and
-aggregation variants.
+## Full Artifact Runs
 
-Current state:
+```bash
+make experiment-full
+uv run python experiments/run_calibrated_localization.py
+make analysis
+uv run mutoracle release-check --strict-full-results
+```
 
-- Smoke outputs are available for E1-E6 and are suitable for workflow
- validation.
-- Full-run outputs are required before final Phase 9 paper tables and figures.
-- Planned dataset alignment still requires RGB-backed runs for E1, E3, E5, and
- E6 in addition to FITS-localization runs.
+Each config records seeds `13`, `42`, and `91` unless explicitly overridden.
+Full mode is blocked until a smoke manifest exists, unless the operator passes
+`--confirmed-smoke`.
 
 ## Experiment Mapping
 
@@ -58,23 +59,29 @@ Current state:
 | --- | --- | --- | --- |
 | E1 | `e1_detection.yaml` | `run_baselines.py` | RAGAS, MetaRAG, and MutOracle response-level detection |
 | E2 | `e2_localization.yaml` | `run_mutoracle.py` | FITS fault-attribution accuracy |
+| E2 calibrated | saved E2 + FITS validation | `run_calibrated_localization.py` | validation-trained centroid localizer |
 | E3 | `e3_ablation.yaml` | `run_ablation.py` | Single-oracle and all-oracle ablations |
 | E4 | `e4_separability.yaml` | `run_ablation.py` | Mutation/operator ablation and delta records |
-| E5 | `e5_latency.yaml` | `run_latency.py` | Cost, latency, and overhead reporting |
+| E5 | `e5_latency.yaml` | `run_latency.py` | Runtime latency audit artifact |
 | E6 | `e6_weighted.yaml` | `run_ablation.py` | Uniform, weighted, and confidence-gated aggregation comparison |
 
-## Phase 9 Analysis Assets
+## Analysis Assets
 
-Phase 9 consumes the saved Phase 8 artifacts and regenerates paper-ready tables,
-figures, and run-ID traceability without hand-entered metrics:
+Analysis consumes saved artifacts and regenerates deterministic tables, figures,
+and run-ID traceability assets without hand-entered metrics:
 
 ```bash
-uv run python experiments/analyze_results.py
+make analysis
 ```
 
-The default command reads smoke artifacts from `experiments/results/` and writes
-LaTeX tables under `paper/tables/`, SVG figures under `paper/figures/`, and
-`paper/TRACEABILITY.md`. Use `--mode dev` for development artifacts and
-`--mode full` after full E1-E6 runs are available. The optional
-`--duckdb-path paper/analysis.duckdb` flag materializes the imported DuckDB
-database for inspection; generated `.duckdb` files are ignored by Git.
+`make analysis` writes outputs to a local-only `.local/analysis-assets/`
+directory and materializes DuckDB at `experiments/results/analysis.duckdb`.
+Use `make analysis-smoke` for credential-free workflow validation and
+`make analysis-dev` for development-scale checks.
+
+Release summaries primarily use E1, E2 calibrated, and E4 result tables. E3,
+E5, and E6 assets are retained for reproducibility review but are not treated
+as headline evidence. E4 reports both applied counts and rejection rates because
+some mutation operators are intentionally guarded; a zero delta is valid, but it
+may mean either a neutral applied mutation or a rejected mutation with no
+behavioral score.
