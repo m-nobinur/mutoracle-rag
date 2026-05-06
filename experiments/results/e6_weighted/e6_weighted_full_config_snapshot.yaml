@@ -1,0 +1,52 @@
+experiment:
+  id: e6_weighted
+  title: "E6 weighted aggregation comparison"
+  output_dir: experiments/results/e6_weighted
+
+dataset:
+  path: data/rgb/rgb_v1.0.0/rgb_phase8.jsonl
+  split: validation
+
+smoke:
+  query_limit: 5
+  seeds: [13, 42, 91]
+
+dev:
+  query_limit: 20
+  seeds: [13]
+
+full:
+  query_limit: 60
+  seeds: [13, 42, 91]
+
+cost_gate:
+  estimated_cost_per_example_usd: 0.0
+  max_estimated_cost_usd: 0.5
+  require_smoke_before_full: true
+
+ablation:
+  oracle_mode: real
+  runtime_config: experiments/configs/phase8_real.yaml
+  variants:
+    - name: uniform
+      oracles: [nli, semantic_similarity, llm_judge]
+      aggregation: uniform
+      delta_threshold: 0.05
+    - name: weighted_calibrated
+      oracles: [nli, semantic_similarity, llm_judge]
+      aggregation: weighted
+      weights:
+        nli: 0.4
+        semantic_similarity: 0.2
+        llm_judge: 0.4
+      delta_threshold: 0.03
+    - name: confidence_gated
+      oracles: [nli, semantic_similarity, llm_judge]
+      aggregation: confidence_gated
+      weights:
+        nli: 0.4
+        semantic_similarity: 0.3
+        llm_judge: 0.3
+      min_score: 0.5
+      min_oracles: 2
+      delta_threshold: 0.05

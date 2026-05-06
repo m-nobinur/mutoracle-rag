@@ -1,0 +1,55 @@
+{
+  "config_snapshot_yaml": "experiments/results/e2_localization/e2_localization_full_config_snapshot.yaml",
+  "cost_cap_usd": 0.5,
+  "dataset_checksum": "0622b4cd2c57cc64887b71f2fedb141b36a0da5942a619b13c5ac39158f119e0",
+  "dataset_path": "data/fits/fits_v1.0.0/fits.jsonl",
+  "duckdb_sql": "experiments/results/e2_localization/e2_localization_full_duckdb.sql",
+  "estimated_cost_usd": 0.0,
+  "experiment_id": "e2_localization",
+  "failure_count": 0,
+  "failures_jsonl": "experiments/results/e2_localization/e2_localization_full_failures.jsonl",
+  "git_commit": "67ccb83375c09dc704589663a97918107c2f822c",
+  "latency_seconds": 0.286291,
+  "metadata": {
+    "purpose": "E2 localization and E4 mutation-delta separability records",
+    "script": "experiments/run_mutoracle.py"
+  },
+  "mode": "full",
+  "model_ids": [
+    "fixture-fits-generator",
+    "fixture-nli",
+    "fixture-semantic-similarity",
+    "fixture-llm-judge"
+  ],
+  "openrouter_daily_usd_cap": null,
+  "provider_routing": [
+    "fixture"
+  ],
+  "query_limit": 240,
+  "raw_jsonl": "experiments/results/e2_localization/e2_localization_full_raw.jsonl",
+  "row_count": 720,
+  "run_id": "9fef3a995039ca52",
+  "sdk_versions": {
+    "mutoracle-rag": "0.1.0",
+    "openai": "2.33.0",
+    "pydantic": "2.13.3",
+    "python": "3.12.13",
+    "pyyaml": "6.0.3",
+    "typer": "0.25.1"
+  },
+  "seeds": [
+    13,
+    42,
+    91
+  ],
+  "split": "test",
+  "status": "complete",
+  "summary_csv": "experiments/results/e2_localization/e2_localization_full_summary.csv",
+  "title": "E2 FITS fault-attribution accuracy",
+  "token_counts": {
+    "completion_tokens": 0,
+    "prompt_tokens": 0,
+    "total_tokens": 0
+  },
+  "written_at": "2026-05-06T08:26:49.018128+00:00"
+}

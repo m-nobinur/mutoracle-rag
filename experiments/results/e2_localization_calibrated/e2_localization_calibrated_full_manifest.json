@@ -1,0 +1,33 @@
+{
+  "experiment_id": "e2_localization_calibrated",
+  "fits_path": "data/fits/fits_v1.0.0/fits.jsonl",
+  "git_commit": "67ccb83375c09dc704589663a97918107c2f822c",
+  "metadata": {
+    "methods": [
+      "centroid_full_delta",
+      "logistic_full_delta",
+      "no_fault_gated_delta",
+      "stage_threshold_delta",
+      "transparent_global_threshold"
+    ],
+    "script": "experiments/run_calibrated_localization.py",
+    "test_source": "e2_localization_full_raw",
+    "training_split": "fits_validation",
+    "uses_test_labels_for_calibration": false
+  },
+  "mode": "full",
+  "model_json": "experiments/results/e2_localization_calibrated/e2_localization_calibrated_full_models.json",
+  "raw_jsonl": "experiments/results/e2_localization_calibrated/e2_localization_calibrated_full_raw.jsonl",
+  "row_count": 3600,
+  "run_id": "c15dc75d90a8cb4d",
+  "seeds": [
+    13,
+    42,
+    91
+  ],
+  "source_e2_raw": "experiments/results/e2_localization/e2_localization_full_raw.jsonl",
+  "status": "complete",
+  "summary_csv": "experiments/results/e2_localization_calibrated/e2_localization_calibrated_full_summary.csv",
+  "validation_row_count": 180,
+  "written_at": "2026-05-06T11:12:04.781378+00:00"
+}

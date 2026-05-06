@@ -33,7 +33,7 @@ ablation:
         nli: 0.4
         semantic_similarity: 0.3
         llm_judge: 0.3
-      operators: [CI, CR, CS, QP, QN, FS, FA]
+      operators: [CI, CR, CS, QP, QN, QD, QI, FS, FA, FE, GN]
       delta_threshold: 0.05
     - name: drop_retrieval_operators
       oracles: [nli, semantic_similarity, llm_judge]
@@ -42,7 +42,7 @@ ablation:
         nli: 0.4
         semantic_similarity: 0.3
         llm_judge: 0.3
-      operators: [QP, QN, FS, FA]
+      operators: [QP, QN, QD, QI, FS, FA, FE, GN]
       delta_threshold: 0.05
     - name: drop_prompt_operators
       oracles: [nli, semantic_similarity, llm_judge]
@@ -51,7 +51,7 @@ ablation:
         nli: 0.4
         semantic_similarity: 0.3
         llm_judge: 0.3
-      operators: [CI, CR, CS, FS, FA]
+      operators: [CI, CR, CS, FS, FA, FE, GN]
       delta_threshold: 0.05
     - name: drop_generation_operators
       oracles: [nli, semantic_similarity, llm_judge]
@@ -60,5 +60,5 @@ ablation:
         nli: 0.4
         semantic_similarity: 0.3
         llm_judge: 0.3
-      operators: [CI, CR, CS, QP, QN]
+      operators: [CI, CR, CS, QP, QN, QD, QI]
       delta_threshold: 0.05

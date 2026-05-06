@@ -32,4 +32,4 @@ localizer:
     llm_judge: 0.3
   delta_threshold: 0.05
   oracles: [nli, semantic_similarity, llm_judge]
-  work_units_per_record: 8
+  work_units_per_record: 12
