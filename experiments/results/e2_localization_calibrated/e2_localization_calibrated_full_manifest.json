@@ -1,7 +1,7 @@
 {
   "experiment_id": "e2_localization_calibrated",
   "fits_path": "data/fits/fits_v1.0.0/fits.jsonl",
-  "git_commit": "67ccb83375c09dc704589663a97918107c2f822c",
+  "git_commit": "2cb9232fda0878380147e876e608737d343e06eb",
   "metadata": {
     "methods": [
       "centroid_full_delta",
@@ -29,5 +29,5 @@
   "status": "complete",
   "summary_csv": "experiments/results/e2_localization_calibrated/e2_localization_calibrated_full_summary.csv",
   "validation_row_count": 180,
-  "written_at": "2026-05-06T11:12:04.781378+00:00"
+  "written_at": "2026-05-11T17:00:47.845008+00:00"
 }
