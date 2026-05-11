@@ -42,6 +42,8 @@ def test_binary_classification_metrics() -> None:
     assert metrics["precision"] == pytest.approx(0.5)
     assert metrics["recall"] == pytest.approx(0.5)
     assert metrics["f1"] == pytest.approx(0.5)
+    assert metrics["balanced_accuracy"] == pytest.approx(0.5)
+    assert metrics["mcc"] == pytest.approx(0.0)
 
 
 def test_analysis_imports_empty_duckdb_and_generates_assets(tmp_path: Path) -> None:
