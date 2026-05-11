@@ -14,8 +14,12 @@ generation, and no-fault controls.
 - Total examples: 300
 - Label counts: {'retrieval': 75, 'prompt': 75, 'generation': 75, 'no_fault': 75}
 - Split counts: {'validation': 60, 'test': 240}
+- Source counts: {'rgb': 150, 'triviaqa': 150}
+- Split/source counts: {'validation': {'rgb': 30, 'triviaqa': 30}, 'test': {'rgb': 120, 'triviaqa': 120}}
 - Validation/test overlap: 0
+- Validation/test source_qid overlap: 0
 - Audit label correctness: 100.00%
+- Audit note: manual artifact review; no inter-annotator agreement measured
 - Query length means (source/fits): 10.20/10.45
 - Query-length gate passed: True
 - Passed: True

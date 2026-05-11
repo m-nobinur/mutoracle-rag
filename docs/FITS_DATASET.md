@@ -52,12 +52,20 @@ Prompt-stage FITS records use one of two documented methods:
 The validator enforces:
 
 - 75 examples per label for a 300-example v1.0.0 split
+- 60 validation examples and 240 test examples, giving 15 validation and 60
+  test examples per label
+- balanced source provenance: 150 RGB-derived and 150 TriviaQA-derived examples
+  overall, with 30/30 in validation and 120/120 in test
 - fault-type stratification within +/- 5%
 - no validation/test `qid` overlap
+- no validation/test `(source, source_qid)` overlap
 - deterministic SHA-256 checksums for JSONL artifacts
 - 50-example audit sample with at least 95% label correctness
 - query-length distribution alignment against source queries
 - immutable frozen artifact behavior for `fits_v1.0.0` unless `--force` is used
+
+The audit sample is a manual artifact-quality check rather than a multi-rater
+annotation study, so it should not be interpreted as inter-annotator agreement.
 
 The implementation uses deterministic schema-compatible local fixtures so the
 build works without network credentials. The manifest preserves the intended
