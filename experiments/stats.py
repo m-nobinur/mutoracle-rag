@@ -102,10 +102,17 @@ def binary_classification_metrics(
     predicted_key: str,
     positive_label: str,
 ) -> dict[str, float]:
-    """Return accuracy, precision, recall, and F1 for a positive class."""
+    """Return binary classification metrics for a positive class."""
 
     if not rows:
-        return {"accuracy": 0.0, "precision": 0.0, "recall": 0.0, "f1": 0.0}
+        return {
+            "accuracy": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "balanced_accuracy": 0.0,
+            "mcc": 0.0,
+        }
     tp = fp = tn = fn = 0
     for row in rows:
         expected = str(row.get(expected_key, ""))
@@ -120,12 +127,17 @@ def binary_classification_metrics(
             tn += 1
     precision = tp / (tp + fp) if tp + fp else 0.0
     recall = tp / (tp + fn) if tp + fn else 0.0
+    specificity = tn / (tn + fp) if tn + fp else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+    mcc_denominator = sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+    mcc = ((tp * tn) - (fp * fn)) / mcc_denominator if mcc_denominator else 0.0
     return {
         "accuracy": (tp + tn) / len(rows),
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "balanced_accuracy": (recall + specificity) / 2.0,
+        "mcc": mcc,
     }
 
 

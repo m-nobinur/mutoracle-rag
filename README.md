@@ -3,7 +3,7 @@
 MutOracle-RAG is a Python research package for mutation-driven fault
 localization in RAG pipelines. The repository includes the FITS dataset, local
 and LLM-backed oracle layers, experiment runners, baseline adapters, and
-release-facing reproducibility checks.
+release-readiness checks.
 
 ## Start Here
 
@@ -39,12 +39,12 @@ through the OpenAI-compatible API when `OPENROUTER_API_KEY` is set.
 
 ## Configuration
 
-Development runs resolve from `experiments/configs/dev.yaml` when it exists.
+Development runs use `experiments/configs/dev.yaml` when it exists.
 Use `.env` for secrets such as `OPENROUTER_API_KEY`, `HF_TOKEN`, or
 `HUGGING_FACE_HUB_TOKEN`.
 
-Install local model dependencies only when you need real NLI or semantic oracle
-inference:
+Install local model dependencies only when you need model-backed NLI or
+semantic-oracle inference:
 
 ```bash
 uv sync --extra oracles --dev

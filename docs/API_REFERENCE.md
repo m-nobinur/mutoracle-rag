@@ -32,14 +32,16 @@ experiments and release workflows. The source package is `src/mutoracle`.
 `mutoracle.mutations`
 
 - `get_operator(operator_id)`: returns one canonical operator by ID.
-- `list_operator_ids()`: returns `CI`, `CR`, `CS`, `QP`, `QN`, `FS`, and `FA`.
+- `list_operator_ids()`: returns `CI`, `CR`, `CS`, `QP`, `QN`, `QD`, `QI`,
+  `FS`, `FA`, `FE`, and `GN`.
 - `mutation_registry()`: registry used by the localizer and tests.
+- `operators_by_stage()`: groups canonical operators by stage.
 
 Canonical stages:
 
 - retrieval/context: `CI`, `CR`, `CS`
-- prompt/query: `QP`, `QN`
-- generation/answer: `FS`, `FA`
+- prompt/query: `QP`, `QN`, `QD`, `QI`
+- generation/answer: `FS`, `FA`, `FE`, `GN`
 
 ## Oracles
 
