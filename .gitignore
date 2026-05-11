@@ -23,6 +23,7 @@ results/**/*.jsonl
 results/**/*.parquet
 results/**/*.duckdb
 paper/
+tmp/
 experiments/results/**/*_dev_*
 experiments/results/**/*.jsonl
 experiments/results/**/*.manifest.json
