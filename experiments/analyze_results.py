@@ -6,7 +6,7 @@ import argparse
 import html
 import json
 import math
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -396,8 +396,60 @@ def detection_table(
     """Build the response-level detection table."""
 
     grouped = _group_rows(rows, "baseline_name")
+    reference_rows = next(iter(grouped.values()), list(rows))
     table_rows: list[list[str]] = []
     cells: list[dict[str, str]] = []
+    expected_counts = Counter(
+        str(row.get("expected_label", ""))
+        for row in reference_rows
+        if row.get("expected_label")
+    )
+    majority_label = (
+        expected_counts.most_common(1)[0][0] if expected_counts else "hallucinated"
+    )
+    baseline_specs = [
+        ("majority_class", majority_label),
+        ("always_positive", "hallucinated"),
+    ]
+    for baseline, predicted_label in baseline_specs:
+        selected = [
+            {
+                **dict(row),
+                "baseline_name": baseline,
+                "predicted_label": predicted_label,
+            }
+            for row in reference_rows
+        ]
+        metric = binary_classification_metrics(
+            selected,
+            expected_key="expected_label",
+            predicted_key="predicted_label",
+            positive_label="hallucinated",
+        )
+        f1_ci = bootstrap_ci(
+            list(selected),
+            lambda sample: binary_classification_metrics(
+                sample,
+                expected_key="expected_label",
+                predicted_key="predicted_label",
+                positive_label="hallucinated",
+            )["f1"],
+            seed=seed,
+            samples=bootstrap_samples,
+        )
+        table_rows.append(
+            [
+                _display_name(baseline),
+                str(len(selected)),
+                _pct(metric["accuracy"]),
+                _pct(metric["precision"]),
+                _pct(metric["recall"]),
+                _pct(metric["balanced_accuracy"]),
+                _number(metric["mcc"], digits=2),
+                _ci_text(f1_ci.estimate, f1_ci.lower, f1_ci.upper),
+            ]
+        )
+        cells.append(_cell("detection", baseline, "f1", manifests["e1_detection"]))
     for baseline in sorted(grouped):
         selected = grouped[baseline]
         metric = binary_classification_metrics(
@@ -423,6 +475,8 @@ def detection_table(
             _pct(metric["accuracy"]),
             _pct(metric["precision"]),
             _pct(metric["recall"]),
+            _pct(metric["balanced_accuracy"]),
+            _number(metric["mcc"], digits=2),
             _ci_text(f1_ci.estimate, f1_ci.lower, f1_ci.upper),
         ]
         table_rows.append(row)
@@ -430,7 +484,16 @@ def detection_table(
     provenance = _provenance([manifests["e1_detection"]], cells)
     return (
         "tab_detection.tex",
-        ["Method", "N", "Acc.", "Prec.", "Rec.", "F1 (95\\% CI)"],
+        [
+            "Method",
+            "N",
+            "Acc.",
+            "Prec.",
+            "Rec.",
+            "Bal. Acc.",
+            "MCC",
+            "F1 (95\\% CI)",
+        ],
         table_rows,
         provenance,
     )
@@ -481,7 +544,7 @@ def localization_table(
                     manifests[experiment_id],
                 )
             )
-        table_rows.append([*row, _short_runs([manifests[experiment_id].run_id])])
+        table_rows.append(row)
     provenance_artifacts = [manifests["e2_localization"]]
     if calibrated_rows:
         provenance_artifacts.append(manifests["e2_localization_calibrated"])
@@ -495,7 +558,6 @@ def localization_table(
             "Prompt",
             "Generation",
             "No Fault",
-            "Run IDs",
         ],
         table_rows,
         provenance,
@@ -632,9 +694,12 @@ def latency_cost_table(
             samples=bootstrap_samples,
         )
         overhead = mean(float(row.get("overhead_vs_rag", 0.0)) for row in selected)
+        workflow_label = _display_name(workflow)
+        if "fixture" not in workflow_label.lower():
+            workflow_label = f"{workflow_label} (Fixture)"
         table_rows.append(
             [
-                _display_name(workflow),
+                workflow_label,
                 str(len(selected)),
                 _ci_seconds(latency_ci.estimate, latency_ci.lower, latency_ci.upper),
                 _ci_usd(cost_ci.estimate, cost_ci.lower, cost_ci.upper),
@@ -1519,6 +1584,10 @@ def _display_name(value: str) -> str:
         "gn": "GN",
         "no_fault": "No Fault",
         "no_fault_detected": "No Fault Detected",
+        "majority_class": "Majority Class",
+        "always_positive": "Always Positive",
+        "metarag": "MetaRAG-style (approx.)",
+        "rag_fixture": "RAG Fixture",
     }
     if normalized in canonical:
         return canonical[normalized]
