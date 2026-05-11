@@ -57,8 +57,8 @@ paths, not external providers.
 
 ## Local Oracle Dependencies
 
-Install the extra packages only when you need real NLI or semantic oracle
-inference:
+Install the extra packages only when you need model-backed NLI or
+semantic-oracle inference:
 
 ```bash
 uv sync --extra oracles --dev
@@ -94,6 +94,6 @@ uv run python experiments/run_weight_search.py --seed 2026
 
 ## Release Note
 
-The release-facing analysis keeps the transparent max-delta rule for audit, but
+The release analysis keeps the transparent max-delta rule for audit, but
 headline localization results use validation-calibrated localizers derived from
 FITS validation data.

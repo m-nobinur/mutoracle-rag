@@ -1,7 +1,7 @@
 # Reproducing MutOracle-RAG
 
 This guide covers the shortest path from a clean clone to smoke validation,
-development runs, and a full artifact freeze.
+development-scale runs, and a full artifact freeze.
 
 ## Requirements
 
@@ -49,7 +49,7 @@ make analysis-smoke
 uv run pytest tests/unit/test_analysis_assets.py --no-cov
 ```
 
-Expected result: tests pass, E1-E6 smoke outputs are refreshed under
+Expected result: the checks pass, E1-E6 smoke outputs are refreshed under
 `experiments/results/`, and smoke analysis assets are refreshed under
 `.local/analysis-assets/`.
 
@@ -71,7 +71,7 @@ make analysis
 uv run mutoracle release-check --strict-full-results
 ```
 
-The strict release check passes when the full E1-E6 manifests exist.
+The strict release check passes when all full E1-E6 manifests are present.
 
 ## 5. Optional Live Model Setup
 

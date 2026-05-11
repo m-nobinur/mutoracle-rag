@@ -61,5 +61,6 @@ The validator enforces:
 
 The implementation uses deterministic schema-compatible local fixtures so the
 build works without network credentials. The manifest preserves the intended
-RGB, TriviaQA, and Wikipedia source identities for audit and future replacement
-with staged raw downloads.
+RGB, TriviaQA, and Wikipedia source identities for audit, even though the
+current build uses deterministic local fixtures instead of staged raw
+downloads.
