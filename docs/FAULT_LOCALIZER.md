@@ -1,13 +1,13 @@
 # Fault Localizer
 
-The base localizer implements a transparent mutation-delta rule. It does not use
-a learned classifier, which keeps the method auditable but also exposes a clear
-limitation: full FITS results show retrieval mutations dominate the stage-delta
-signal. Current release analyses therefore track both this transparent baseline
-and validation-calibrated localizers over the same eleven operator-delta
-features. The current comparison includes transparent max-delta, explicit
-no-fault gating, stage-specific thresholds, nearest-centroid calibration, and a
-small multinomial logistic classifier.
+The transparent baseline localizer implements a mutation-delta rule. It does
+not use a learned classifier, which keeps the method auditable but also exposes
+a clear limitation: full FITS results show retrieval mutations dominate the
+stage-delta signal. Current release analyses therefore track both this
+transparent baseline and validation-calibrated localizers over the same eleven
+operator-delta features. The current comparison includes transparent max-delta,
+explicit no-fault gating, stage-specific thresholds, nearest-centroid
+calibration, and a small multinomial logistic classifier.
 
 ## Aggregation
 
