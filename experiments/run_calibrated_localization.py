@@ -278,8 +278,37 @@ def _model_payload(name: str, model: Any) -> dict[str, Any]:
         else getattr(model, "method", name),
     }
     if isinstance(model, StageThresholdCalibrator):
-        payload["stage_thresholds"] = model.stage_thresholds
+        payload["stage_thresholds"] = _rounded_mapping(model.stage_thresholds)
+    if isinstance(model, CentroidDeltaCalibrator):
+        payload["operators"] = list(model.operators)
+        payload["standardizer"] = {
+            "means": _rounded_sequence(model.means),
+            "stdevs": _rounded_sequence(model.stdevs),
+        }
+        payload["centroids"] = {
+            label: _rounded_sequence(values)
+            for label, values in sorted(model.centroids.items())
+        }
+    if isinstance(model, LogisticDeltaCalibrator):
+        payload["operators"] = list(model.operators)
+        payload["features"] = ["bias", *model.operators]
+        payload["standardizer"] = {
+            "means": _rounded_sequence(model.means),
+            "stdevs": _rounded_sequence(model.stdevs),
+        }
+        payload["weights"] = {
+            label: _rounded_sequence(values)
+            for label, values in sorted(model.weights.items())
+        }
     return payload
+
+
+def _rounded_sequence(values: Sequence[float]) -> list[float]:
+    return [round(float(value), 6) for value in values]
+
+
+def _rounded_mapping(values: Mapping[str, float]) -> dict[str, float]:
+    return {str(key): round(float(value), 6) for key, value in sorted(values.items())}
 
 
 def _write_manifest(

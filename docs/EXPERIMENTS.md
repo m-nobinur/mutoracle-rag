@@ -18,7 +18,7 @@ run release experiments from notebooks.
 | --- | --- | --- |
 | Smoke | First check after a clean clone or CLI change | `make experiment-smoke` |
 | Dev | Iterating on code or prompts | `make experiment-dev` and `make analysis-dev` |
-| Full | Freezing release-facing artifacts | `make experiment-full`, `uv run python experiments/run_calibrated_localization.py`, `make analysis` |
+| Full | Freezing release artifacts | `make experiment-full`, `uv run python experiments/run_calibrated_localization.py`, `make analysis` |
 
 Smoke mode is credential-free where possible. Dev mode writes separate
 `*_dev_*` artifacts, uses 20 queries and seed `13`, and keeps output small.

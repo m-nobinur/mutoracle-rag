@@ -212,7 +212,11 @@ def mutate(
         typer.Option(
             "--operator",
             "-o",
-            help="Canonical mutation operator ID: CI, CR, CS, QP, QN, FS, or FA.",
+            help=(
+                "Canonical mutation operator ID: "
+                + ", ".join(list_operator_ids())
+                + "."
+            ),
         ),
     ],
     query: Annotated[

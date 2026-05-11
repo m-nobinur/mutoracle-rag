@@ -106,7 +106,7 @@ Before query:
 How does MutOracle-RAG localize faults?
 
 After query:
-Describe how MutOracle-RAG localize faults?
+Explain how MutOracle-RAG localizes faults.
 ```
 
 QN:
@@ -160,7 +160,7 @@ Before answer:
 Elon Musk founded SpaceX.
 
 After answer:
-Not Elon Musk founded SpaceX.
+Elon Musk did not found SpaceX.
 ```
 
 ## CLI
