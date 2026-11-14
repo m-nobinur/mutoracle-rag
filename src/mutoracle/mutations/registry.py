@@ -25,7 +25,7 @@ from mutoracle.mutations.retrieval import (
 
 
 def mutation_registry() -> dict[str, MutationOperator]:
-    """Return the canonical Phase 3 operator registry keyed by operator ID."""
+    """Return the canonical operator registry keyed by operator ID."""
 
     operators: list[tuple[str, MutationOperator]] = [
         ("CI", cast("MutationOperator", ContextInjectionMutation())),

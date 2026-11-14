@@ -1,4 +1,4 @@
-"""Run Phase 7 fixture baselines or Phase 8 config-driven detection experiments."""
+"""Run fixture baselines or config-driven detection experiments."""
 
 from __future__ import annotations
 
@@ -152,13 +152,13 @@ def _parse_args() -> argparse.Namespace:
         "--experiment-config",
         type=Path,
         default=None,
-        help="Optional Phase 8 baseline experiment YAML config.",
+        help="Optional baseline experiment YAML config.",
     )
     parser.add_argument(
         "--mode",
         choices=["smoke", "dev", "full"],
         default="smoke",
-        help="Phase 8 run mode when --experiment-config is used.",
+        help="Run mode when --experiment-config is used.",
     )
     parser.add_argument(
         "--smoke",
@@ -168,12 +168,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--confirm-cost",
         action="store_true",
-        help="Allow Phase 8 runs above the configured cost cap.",
+        help="Allow experiment runs above the configured cost cap.",
     )
     parser.add_argument(
         "--confirmed-smoke",
         action="store_true",
-        help="Confirm Phase 8 smoke completion before a full run.",
+        help="Confirm smoke run completion before a full run.",
     )
     parser.add_argument(
         "--query-limit",

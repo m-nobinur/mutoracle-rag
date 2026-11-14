@@ -1,4 +1,4 @@
-"""Deterministic Phase 6 source loaders.
+"""Deterministic source loaders.
 
 The public functions are intentionally small and local-first. They provide
 stable fixture-backed RGB, TriviaQA, and noise pools for CI and offline work,
@@ -168,7 +168,7 @@ def build_noise_pool(
 
 
 def dataset_manifests(*, build_date: str | None = None) -> list[DatasetManifest]:
-    """Return Phase 6 source manifests with required provenance fields."""
+    """Return source manifests with required provenance fields."""
 
     manifest_date = build_date or date.today().isoformat()
     rgb_staging = _read_staged_rgb_manifest()

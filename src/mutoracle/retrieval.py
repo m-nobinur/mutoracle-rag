@@ -1,4 +1,4 @@
-"""Local retrieval primitives for the Phase 2 RAG system under test."""
+"""Local retrieval primitives for the RAG system under test."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class RetrievalHit:
 
 
 def load_corpus(path: Path | None = None) -> list[Passage]:
-    """Load a corpus from JSON or the packaged Phase 2 fixture corpus."""
+    """Load a corpus from JSON or the packaged fixture corpus."""
 
     if path is None:
         raw_text = (

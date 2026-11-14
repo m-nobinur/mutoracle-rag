@@ -1,4 +1,4 @@
-"""Prompt-builder compatibility module for the Phase 2 layout."""
+"""Prompt-builder compatibility module for the `pipeline` package layout."""
 
 from mutoracle.prompts import build_rag_prompt
 

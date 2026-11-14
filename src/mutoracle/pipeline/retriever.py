@@ -1,4 +1,4 @@
-"""Retriever compatibility module for the Phase 2 layout."""
+"""Retriever compatibility module for the `pipeline` package layout."""
 
 from mutoracle.retrieval import LexicalRetriever, Passage, RetrievalHit, load_corpus
 

@@ -1,4 +1,4 @@
-"""Run Phase 8 MutOracle localization and separability experiments."""
+"""Run the localization and separability experiments."""
 
 from __future__ import annotations
 
@@ -238,7 +238,7 @@ def _parse_args() -> argparse.Namespace:
         "--config",
         type=Path,
         default=Path("experiments/configs/e2_localization.yaml"),
-        help="Phase 8 experiment YAML config.",
+        help="Experiment YAML config.",
     )
     parser.add_argument(
         "--mode",

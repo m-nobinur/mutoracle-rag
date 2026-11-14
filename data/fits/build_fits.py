@@ -1,4 +1,4 @@
-"""Script entry point for the Phase 6 FITS builder."""
+"""Script entry point for the FITS builder."""
 
 from __future__ import annotations
 

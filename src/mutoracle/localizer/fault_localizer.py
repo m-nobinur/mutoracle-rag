@@ -219,7 +219,7 @@ def choose_stage(
     delta_threshold: float,
     stage_thresholds: Mapping[Stage, float] | None = None,
 ) -> DiagnosisStage:
-    """Apply the final-plan thresholded argmax decision rule."""
+    """Apply the thresholded argmax decision rule."""
 
     if not stage_deltas:
         return "no_fault_detected"

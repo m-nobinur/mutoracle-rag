@@ -1,9 +1,7 @@
 # Documentation Index
 
-This directory contains the maintained documentation for the current
-MutOracle-RAG artifact. Historical phase notes and planning drafts live under
-`dev-plan-source/`; the files below are the ones to use when reproducing,
-reviewing, or extending the project.
+This directory contains the documentation for MutOracle-RAG. Use these files
+when reproducing, reviewing, or extending the project.
 
 ## Essential Guides
 
@@ -18,7 +16,7 @@ reviewing, or extending the project.
 
 ## Method References
 
-- [MUTATION_TAXONOMY.md](MUTATION_TAXONOMY.md): CI, CR, CS, QP, QN, FS, and FA.
+- [MUTATION_TAXONOMY.md](MUTATION_TAXONOMY.md): the eleven operators, CI through GN.
 - [ORACLE_LAYER.md](ORACLE_LAYER.md): NLI, semantic-similarity, and LLM-judge
   scoring.
 - [FAULT_LOCALIZER.md](FAULT_LOCALIZER.md): aggregation, delta computation, and

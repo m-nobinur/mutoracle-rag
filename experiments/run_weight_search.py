@@ -1,4 +1,4 @@
-"""Deterministic grid search for Phase 5 aggregation calibration."""
+"""Deterministic grid search for aggregation weight calibration."""
 
 from __future__ import annotations
 
@@ -186,7 +186,7 @@ def predict_example(
     weights: Mapping[str, float],
     threshold: float,
 ) -> DiagnosisStage:
-    """Predict one calibration example with the final-plan decision rule."""
+    """Predict one calibration example with the thresholded argmax decision rule."""
 
     aggregator = WeightedAggregator(dict(weights))
     baseline_score = aggregator.combine(example.baseline)

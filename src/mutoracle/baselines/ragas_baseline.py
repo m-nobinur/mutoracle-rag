@@ -32,7 +32,7 @@ class RagasScorer(Protocol):
 
 
 class RagasMetricScorer(RagasScorer, Protocol):
-    """Scorer that can return the full Phase 7 RAGAS metric set."""
+    """Scorer that can return the full RAGAS metric set."""
 
     def score_metrics(
         self,
@@ -132,7 +132,7 @@ class OfficialRagasFaithfulnessScorer:
         *,
         reference: str | None = None,
     ) -> dict[str, float]:
-        """Return the Phase 7 RAGAS metric set for one run."""
+        """Return the RAGAS metric set for one run."""
 
         scores: dict[str, float] = {}
         for metric_name, metric in self._metrics.items():

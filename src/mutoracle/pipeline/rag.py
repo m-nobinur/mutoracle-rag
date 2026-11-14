@@ -1,4 +1,4 @@
-"""RAG pipeline compatibility module for the Phase 2 layout."""
+"""RAG pipeline compatibility module for the `pipeline` package layout."""
 
 from mutoracle.rag import FixtureRAGPipeline
 

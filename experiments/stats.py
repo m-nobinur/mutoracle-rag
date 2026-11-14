@@ -1,4 +1,4 @@
-"""Deterministic statistics helpers for Phase 9 analysis assets."""
+"""Deterministic statistics helpers for analysis assets."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Generate Phase 9 paper tables, figures, and provenance from saved results."""
+"""Generate paper tables, figures, and provenance from saved results."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ MUTATION_STAGES = {
 
 @dataclass(frozen=True)
 class ResultArtifact:
-    """One Phase 8 raw result file and its manifest provenance."""
+    """One experiment raw result file and its manifest provenance."""
 
     experiment_id: str
     mode: str
@@ -70,7 +70,7 @@ class ResultArtifact:
 
 @dataclass(frozen=True)
 class AnalysisOutputs:
-    """Paths written by one Phase 9 analysis invocation."""
+    """Paths written by one analysis invocation."""
 
     tables: list[Path]
     figures: list[Path]
@@ -114,7 +114,7 @@ def analyze_results(
     bootstrap_samples: int = 1000,
     seed: int = 2026,
 ) -> AnalysisOutputs:
-    """Generate all requested Phase 9 assets from saved Phase 8 artifacts."""
+    """Generate all requested analysis assets from saved experiment artifacts."""
 
     artifacts = discover_artifacts(
         results_dir=results_dir,
@@ -357,7 +357,7 @@ def import_results(
     connection: duckdb.DuckDBPyConnection,
     artifacts: Sequence[ResultArtifact],
 ) -> None:
-    """Import Phase 8 JSONL records and manifest provenance into DuckDB."""
+    """Import experiment JSONL records and manifest provenance into DuckDB."""
 
     raw_files = ", ".join(
         _sql_literal(str(artifact.raw_jsonl)) for artifact in artifacts
@@ -1367,7 +1367,7 @@ def write_traceability_report(
     """Write the table/figure to run-ID traceability report."""
 
     lines = [
-        "# Phase 9 Traceability Report",
+        "# Traceability Report",
         "",
         f"Generated from `{mode}` result artifacts. Metrics are derived from saved "
         "JSONL files through `experiments/analyze_results.py`.",

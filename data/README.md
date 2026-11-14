@@ -1,6 +1,6 @@
 # Data Manifests
 
-Phase 6 records dataset provenance before any experiment consumes data. Each
+Dataset provenance is recorded before any experiment consumes data. Each
 manifest entry must include:
 
 - `dataset_id`: stable local identifier such as `rgb`, `triviaqa`, or

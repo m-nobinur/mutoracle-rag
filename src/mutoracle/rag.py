@@ -1,4 +1,4 @@
-"""Reproducible RAG system under test for Phase 2."""
+"""Reproducible RAG system under test."""
 
 from __future__ import annotations
 

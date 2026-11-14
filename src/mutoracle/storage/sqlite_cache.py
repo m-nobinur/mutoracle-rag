@@ -1,4 +1,4 @@
-"""SQLite cache compatibility module for the Phase 2 layout."""
+"""SQLite cache compatibility module for the `storage` package layout."""
 
 from mutoracle.cache import (
     CachedCompletion,

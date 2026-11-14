@@ -1,4 +1,4 @@
-"""Run Phase 8 oracle and aggregation ablation experiments."""
+"""Run the oracle and aggregation ablation experiments."""
 
 from __future__ import annotations
 

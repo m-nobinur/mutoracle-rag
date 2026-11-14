@@ -1,4 +1,4 @@
-"""OpenRouter provider compatibility module for the Phase 2 layout."""
+"""OpenRouter provider compatibility module for the `providers` package layout."""
 
 from mutoracle.provider import OpenRouterProvider, ProviderCompletion
 

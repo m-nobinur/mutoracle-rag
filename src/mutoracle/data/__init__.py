@@ -1,4 +1,4 @@
-"""Phase 6 data and FITS construction helpers."""
+"""Data loading and FITS construction helpers."""
 
 from mutoracle.data.fits import (
     FITSRecord,

@@ -1,4 +1,4 @@
-"""Dataset manifest and checksum helpers for Phase 6."""
+"""Dataset manifest and checksum helpers."""
 
 from __future__ import annotations
 

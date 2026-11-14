@@ -1,4 +1,4 @@
-"""Phase 7 response-level baseline harnesses."""
+"""Response-level baseline harnesses (RAGAS and MetaRAG-style)."""
 
 from mutoracle.baselines.calibration import (
     LabeledScore,

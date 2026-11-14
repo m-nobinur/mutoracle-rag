@@ -1,4 +1,4 @@
-"""Run Phase 8 cost and latency reporting experiment."""
+"""Run the cost and latency reporting experiment."""
 
 from __future__ import annotations
 
