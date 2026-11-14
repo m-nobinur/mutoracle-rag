@@ -1,7 +1,7 @@
 {
   "artifact": "fits_v1.0.0",
   "build_seed": 2026,
-  "code_commit": "58a030b85c91d81a3eab22ea9a3338b215744249",
+  "code_commit": "4caf4567168b9460dc3909d40990539252cf00d2",
   "created_at": "2026-05-05T00:00:00+00:00",
   "files": {
     "audit_sample_jsonl": {
@@ -51,7 +51,7 @@
       "license": "source license; verify upstream before redistribution",
       "name": "RGB Benchmark",
       "notes": "Primary RAG evaluation source. The offline build uses a schema-compatible fixture preview until raw downloads are staged.",
-      "revision": "phase6-fixture-preview",
+      "revision": "fixture-preview",
       "url": "https://github.com/chen700564/RGB"
     },
     {
@@ -60,8 +60,8 @@
       "date": "2026-05-05",
       "license": "Apache-2.0",
       "name": "TriviaQA filtered subset",
-      "notes": "Generalization and FITS source. The Phase 6 loader keeps a local deterministic subset for offline reproducibility.",
-      "revision": "phase6-fixture-preview",
+      "notes": "Generalization and FITS source. The loader keeps a local deterministic subset for offline reproducibility.",
+      "revision": "fixture-preview",
       "url": "https://huggingface.co/datasets/mandarjoshi/trivia_qa"
     },
     {
@@ -71,7 +71,7 @@
       "license": "CC BY-SA 3.0",
       "name": "Wikipedia/noise passage pool",
       "notes": "Distractor pool used for CI and FITS generation faults.",
-      "revision": "phase6-fixture-preview",
+      "revision": "fixture-preview",
       "url": "https://huggingface.co/datasets/wikimedia/wikipedia"
     }
   ]

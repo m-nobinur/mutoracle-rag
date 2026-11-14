@@ -8,7 +8,7 @@
   "experiment_id": "e2_localization",
   "failure_count": 0,
   "failures_jsonl": "experiments/results/e2_localization/e2_localization_smoke_failures.jsonl",
-  "git_commit": "2236cee62f391fc036032cb66c010ea5312183c5",
+  "git_commit": "3c2cb6b3dd84fa975b51e02b74bbd6d1d4a2d712",
   "latency_seconds": 0.002909,
   "metadata": {
     "purpose": "E2 localization and E4 mutation-delta separability records",

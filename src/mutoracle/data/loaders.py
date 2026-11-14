@@ -184,7 +184,7 @@ def dataset_manifests(*, build_date: str | None = None) -> list[DatasetManifest]
         json.dumps(item, sort_keys=True) for item in build_noise_pool(limit=10)
     )
     rgb_checksum = sha256_text(rgb_preview)
-    rgb_revision = "phase6-fixture-preview"
+    rgb_revision = "fixture-preview"
     rgb_notes = (
         "Primary RAG evaluation source. The offline build uses a "
         "schema-compatible fixture preview until raw downloads are staged."
@@ -203,7 +203,7 @@ def dataset_manifests(*, build_date: str | None = None) -> list[DatasetManifest]
             rgb_revision = revision.strip()
         rgb_notes = (
             "Primary RAG evaluation source staged from the RGB benchmark "
-            "repository with local source and Phase 8 split artifacts."
+            "repository with local source and evaluation split artifacts."
         )
 
     return [
@@ -222,11 +222,11 @@ def dataset_manifests(*, build_date: str | None = None) -> list[DatasetManifest]
             name="TriviaQA filtered subset",
             url="https://huggingface.co/datasets/mandarjoshi/trivia_qa",
             license="Apache-2.0",
-            revision="phase6-fixture-preview",
+            revision="fixture-preview",
             checksum=sha256_text(trivia_preview),
             date=manifest_date,
             notes=(
-                "Generalization and FITS source. The Phase 6 loader keeps a "
+                "Generalization and FITS source. The loader keeps a "
                 "local deterministic subset for offline reproducibility."
             ),
         ),
@@ -235,7 +235,7 @@ def dataset_manifests(*, build_date: str | None = None) -> list[DatasetManifest]
             name="Wikipedia/noise passage pool",
             url="https://huggingface.co/datasets/wikimedia/wikipedia",
             license="CC BY-SA 3.0",
-            revision="phase6-fixture-preview",
+            revision="fixture-preview",
             checksum=sha256_text(noise_preview),
             date=manifest_date,
             notes="Distractor pool used for CI and FITS generation faults.",

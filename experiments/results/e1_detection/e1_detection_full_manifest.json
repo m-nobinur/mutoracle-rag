@@ -2,13 +2,13 @@
   "config_snapshot_yaml": "experiments/results/e1_detection/e1_detection_full_config_snapshot.yaml",
   "cost_cap_usd": 0.5,
   "dataset_checksum": "e80370334a593590abeaa5935dc30ba72962e45579f068940c42a0eef02327fd",
-  "dataset_path": "data/rgb/rgb_v1.0.0/rgb_phase8.jsonl",
+  "dataset_path": "data/rgb/rgb_v1.0.0/rgb_eval.jsonl",
   "duckdb_sql": "experiments/results/e1_detection/e1_detection_full_duckdb.sql",
   "estimated_cost_usd": 0.0,
   "experiment_id": "e1_detection",
   "failure_count": 0,
   "failures_jsonl": "experiments/results/e1_detection/e1_detection_full_failures.jsonl",
-  "git_commit": "67ccb83375c09dc704589663a97918107c2f822c",
+  "git_commit": "cf2fa4053a536521505c18937bb63615a4e1b55f",
   "latency_seconds": 3.336507,
   "metadata": {
     "baseline_names": [

@@ -2,13 +2,13 @@
   "config_snapshot_yaml": "experiments/results/e5_latency/e5_latency_smoke_config_snapshot.yaml",
   "cost_cap_usd": 0.5,
   "dataset_checksum": "e80370334a593590abeaa5935dc30ba72962e45579f068940c42a0eef02327fd",
-  "dataset_path": "data/rgb/rgb_v1.0.0/rgb_phase8.jsonl",
+  "dataset_path": "data/rgb/rgb_v1.0.0/rgb_eval.jsonl",
   "duckdb_sql": "experiments/results/e5_latency/e5_latency_smoke_duckdb.sql",
   "estimated_cost_usd": 0.0,
   "experiment_id": "e5_latency",
   "failure_count": 0,
   "failures_jsonl": "experiments/results/e5_latency/e5_latency_smoke_failures.jsonl",
-  "git_commit": "2236cee62f391fc036032cb66c010ea5312183c5",
+  "git_commit": "3c2cb6b3dd84fa975b51e02b74bbd6d1d4a2d712",
   "latency_seconds": 0.024366,
   "metadata": {
     "script": "experiments/run_latency.py"

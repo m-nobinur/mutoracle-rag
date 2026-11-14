@@ -72,7 +72,7 @@ and returns `0.0` so downstream aggregation can continue deterministically.
 - Semantic similarity is relatedness, not factual entailment; high similarity
   can still hide contradictions.
 - The NLI oracle depends on the chosen checkpoint and context length behavior.
-  Long contexts should be chunked or calibrated in later phases.
+  Long contexts should be chunked or calibrated separately.
 - The LLM judge is the only remote oracle path and should be used with the
   SQLite cache enabled.
 - Provider-backed tests must use the `provider` pytest marker and are skipped by

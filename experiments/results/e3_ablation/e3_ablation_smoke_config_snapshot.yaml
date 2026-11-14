@@ -4,7 +4,7 @@ experiment:
   output_dir: experiments/results/e3_ablation
 
 dataset:
-  path: data/rgb/rgb_v1.0.0/rgb_phase8.jsonl
+  path: data/rgb/rgb_v1.0.0/rgb_eval.jsonl
   split: test
 
 smoke:
@@ -22,7 +22,7 @@ cost_gate:
 
 ablation:
   oracle_mode: real
-  runtime_config: experiments/configs/phase8_real.yaml
+  runtime_config: experiments/configs/full_runtime.yaml
   variants:
     - name: nli_only
       oracles: [nli]

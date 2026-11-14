@@ -65,7 +65,7 @@ def main() -> None:
 
     args = _parse_args()
     if args.experiment_config is not None:
-        _run_phase8_experiment(args)
+        _run_config_experiment(args)
         return
 
     config = load_config(args.config)
@@ -222,7 +222,7 @@ def _fixture_queries(*, limit: int) -> list[str]:
     return selected[:limit]
 
 
-def _run_phase8_experiment(args: argparse.Namespace) -> None:
+def _run_config_experiment(args: argparse.Namespace) -> None:
     settings = resolve_run_settings(
         args.experiment_config,
         mode=args.mode,
@@ -271,7 +271,7 @@ def _run_phase8_experiment(args: argparse.Namespace) -> None:
     thresholds = {
         name: float(baseline_config.get("threshold", 0.5)) for name in baseline_names
     }
-    baselines = _phase8_baselines(
+    baselines = _config_baselines(
         baseline_names,
         evaluator=str(baseline_config.get("evaluator", "fixture")),
         oracle_mode=oracle_mode,
@@ -391,7 +391,7 @@ def _run_phase8_experiment(args: argparse.Namespace) -> None:
     print(f"Recorded seeds: {manifest['seeds']}")
 
 
-def _phase8_baselines(
+def _config_baselines(
     names: list[str],
     *,
     evaluator: str,

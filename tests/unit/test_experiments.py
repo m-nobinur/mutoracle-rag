@@ -36,7 +36,7 @@ from mutoracle.experiments import (
 )
 
 
-def test_phase_eight_config_suite_exists() -> None:
+def test_experiment_config_suite_exists() -> None:
     for name in (
         "e1_detection.yaml",
         "e2_localization.yaml",
@@ -102,7 +102,7 @@ def test_cost_gate_enforces_global_five_usd_confirmation(
         )
 
 
-def test_mutoracle_smoke_writes_phase_eight_artifacts(
+def test_mutoracle_smoke_writes_experiment_artifacts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -624,7 +624,7 @@ def test_mutoracle_detection_baseline_reuses_real_oracles(
 
 
 def _load_script(path: str) -> ModuleType:
-    spec = util.spec_from_file_location("phase8_script", Path(path))
+    spec = util.spec_from_file_location("baselines_script", Path(path))
     assert spec is not None
     assert spec.loader is not None
     module = util.module_from_spec(spec)

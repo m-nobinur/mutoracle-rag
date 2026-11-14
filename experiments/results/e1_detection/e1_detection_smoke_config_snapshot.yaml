@@ -4,7 +4,7 @@ experiment:
   output_dir: experiments/results/e1_detection
 
 dataset:
-  path: data/rgb/rgb_v1.0.0/rgb_phase8.jsonl
+  path: data/rgb/rgb_v1.0.0/rgb_eval.jsonl
   split: test
 
 smoke:
@@ -24,5 +24,5 @@ baseline:
   baselines: [ragas, metarag, mutoracle_weighted]
   evaluator: fixture
   oracle_mode: real
-  runtime_config: experiments/configs/phase8_real.yaml
+  runtime_config: experiments/configs/full_runtime.yaml
   threshold: 0.5

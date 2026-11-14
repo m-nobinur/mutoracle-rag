@@ -48,7 +48,7 @@ def test_binary_classification_metrics() -> None:
 
 def test_analysis_imports_empty_duckdb_and_generates_assets(tmp_path: Path) -> None:
     results_dir = tmp_path / "results"
-    _write_phase_nine_fixture_results(results_dir)
+    _write_analysis_fixture_results(results_dir)
 
     outputs = analyze_results(
         results_dir=results_dir,
@@ -105,7 +105,7 @@ def test_missing_result_files_fail_clearly(tmp_path: Path) -> None:
 
 def test_missing_experiment_rows_fail_clearly(tmp_path: Path) -> None:
     results_dir = tmp_path / "results"
-    _write_phase_nine_fixture_results(results_dir)
+    _write_analysis_fixture_results(results_dir)
 
     e2_raw = results_dir / "e2_localization" / "e2_localization_smoke_raw.jsonl"
     rewritten = []
@@ -126,7 +126,7 @@ def test_generated_figures_fit_column_width_and_have_legible_text(
     tmp_path: Path,
 ) -> None:
     results_dir = tmp_path / "results"
-    _write_phase_nine_fixture_results(results_dir)
+    _write_analysis_fixture_results(results_dir)
 
     outputs = analyze_results(results_dir=results_dir, paper_dir=tmp_path / "paper")
 
@@ -151,7 +151,7 @@ def test_generated_figures_fit_column_width_and_have_legible_text(
         assert all('font-family="Arial, sans-serif"' in tag for tag in text_elements)
 
 
-def _write_phase_nine_fixture_results(results_dir: Path) -> None:
+def _write_analysis_fixture_results(results_dir: Path) -> None:
     _write_result(
         results_dir,
         "e1_detection",

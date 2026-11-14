@@ -19,7 +19,7 @@ from mutoracle.providers.openrouter_provider import OpenRouterProvider
 from mutoracle.storage.sqlite_cache import SQLiteCacheLedger
 
 
-def test_planned_experiment_entry_points_exist() -> None:
+def test_experiment_entry_points_exist() -> None:
     assert Path("experiments/run_baselines.py").exists()
     assert Path("experiments/run_weight_search.py").exists()
     assert Path("experiments/run_mutoracle.py").exists()
@@ -37,7 +37,7 @@ def test_planned_experiment_entry_points_exist() -> None:
     assert Path("docs/EXPERIMENTS.md").exists()
 
 
-def test_phase_ten_release_artifacts_exist() -> None:
+def test_release_artifacts_exist() -> None:
     for path in (
         "LICENSE",
         "README.md",
@@ -55,7 +55,7 @@ def test_phase_ten_release_artifacts_exist() -> None:
         assert Path(path).exists()
 
 
-def test_phase_two_module_layout_exports_expected_symbols() -> None:
+def test_pipeline_modules_export_expected_symbols() -> None:
     assert build_rag_prompt
     assert FixtureRAGPipeline
     assert LexicalRetriever
@@ -63,7 +63,7 @@ def test_phase_two_module_layout_exports_expected_symbols() -> None:
     assert SQLiteCacheLedger
 
 
-def test_phase_three_module_layout_exports_expected_symbols() -> None:
+def test_mutation_registry_has_all_operators() -> None:
     assert get_operator("CI")
     assert set(mutation_registry()) == {
         "CI",
@@ -80,25 +80,25 @@ def test_phase_three_module_layout_exports_expected_symbols() -> None:
     }
 
 
-def test_phase_four_module_layout_exports_expected_symbols() -> None:
+def test_oracle_modules_export_expected_symbols() -> None:
     assert SemanticSimilarityOracle
     assert NLIOracle
     assert LLMJudgeOracle
 
 
-def test_phase_five_module_layout_exports_expected_symbols() -> None:
+def test_aggregation_and_localizer_export_expected_symbols() -> None:
     assert UniformAggregator
     assert WeightedAggregator
     assert ConfidenceGatedAggregator
     assert FaultLocalizer
 
 
-def test_phase_six_module_layout_exports_expected_symbols() -> None:
+def test_fits_modules_export_expected_symbols() -> None:
     assert build_fits_dataset
     assert validate_fits_records
 
 
-def test_phase_seven_module_layout_exports_expected_symbols() -> None:
+def test_baseline_modules_export_expected_symbols() -> None:
     assert RagasBaseline
     assert MetaRAGBaseline
     assert run_baselines

@@ -11,7 +11,7 @@ MutOracle-RAG uses two config layers:
 | File | Purpose |
 | --- | --- |
 | `experiments/configs/dev.yaml` | Default runtime config for development and most local commands. |
-| `experiments/configs/phase8_real.yaml` | Runtime config used for full-result artifact generation. |
+| `experiments/configs/full_runtime.yaml` | Runtime config used for full-result artifact generation. |
 | `experiments/configs/e*.yaml` | Experiment definitions for E1-E6 runs. |
 | `experiments/configs/calibrated.yaml` | Generated calibrated localizer settings. |
 

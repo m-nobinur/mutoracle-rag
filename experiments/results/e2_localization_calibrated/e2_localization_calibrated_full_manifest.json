@@ -1,7 +1,7 @@
 {
   "experiment_id": "e2_localization_calibrated",
   "fits_path": "data/fits/fits_v1.0.0/fits.jsonl",
-  "git_commit": "2cb9232fda0878380147e876e608737d343e06eb",
+  "git_commit": "556bbafe91732d196b8276826f6d6d1bf63a72aa",
   "metadata": {
     "methods": [
       "centroid_full_delta",

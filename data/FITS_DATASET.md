@@ -1,6 +1,6 @@
 # FITS v1.0.0 Dataset Card
 
-FITS is the Phase 6 fault-injection test split for MutOracle-RAG.
+FITS is the fault-injection test split for MutOracle-RAG.
 It contains balanced single-stage labels for retrieval, prompt,
 generation, and no-fault controls.
 

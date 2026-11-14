@@ -37,7 +37,7 @@ Each operator returns a `RAGRun` and appends mutation metadata:
 
 Rejected mutations keep the original field values and set `rejected` plus a
 `rejection_reason`. This lets experiments run deterministically while allowing
-later oracle and localization phases to filter unsupported cases.
+the oracle and localization stages to filter unsupported cases.
 
 ## Before and After Examples
 
