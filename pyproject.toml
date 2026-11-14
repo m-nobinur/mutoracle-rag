@@ -42,8 +42,8 @@ oracles = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/example/mutoracle-rag"
-Issues = "https://github.com/example/mutoracle-rag/issues"
+Homepage = "https://github.com/m-nobinur/mutoracle-rag"
+Issues = "https://github.com/m-nobinur/mutoracle-rag/issues"
 
 [project.scripts]
 mutoracle = "mutoracle.cli:app"
